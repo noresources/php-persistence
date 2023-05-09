@@ -1,0 +1,53 @@
+{
+	"name": "noresources/persistence", 
+	"description": "Doctrine ODM Repository implementations", 
+	"type": "library", 
+	"license": "MIT", 
+	"keywords": [
+		"Persistence", 
+		"Reflection"
+	], 
+	"authors": [
+		{
+			"name": "Renaud Guillard", 
+			"email": "dev@nore.fr", 
+			"role": "lead"
+		}
+	], 
+	"scripts": {
+		"test": "@php  ./vendor/bin/phpunit --color=never --bootstrap vendor/autoload.php tests/cases"
+	}, 
+	"autoload": {
+		"psr-4": {
+			"NoreSources\\Persistence\\": "src/", 
+			"NoreSources\\Persistence\\TestUtility\\": "tests/src/"
+		}
+	}, 
+	"require": {
+		"doctrine/instantiator": "^1.5", 
+		"doctrine/persistence": "^2.5", 
+		"noresources/ns-php-data": "^2.2", 
+		"doctrine/collections": "^1.8", 
+		"doctrine/event-manager": "^1.2", 
+		"psr/cache": "^1.0"
+	}, 
+	"require-dev": {
+		"phpunit/phpunit": ">= 7.0", 
+		"symfony/cache": "^3.4", 
+		"doctrine/orm": "^2.15"
+	}, 
+	"autoload-dev": {
+		"psr-4": {
+			"NoreSources\\Persistence\\TestCase\\": "tests/cases", 
+			"NoreSources\\Persistence\\TestData\\": "tests/reference/src/"
+		}
+	}, 
+	"extra": {
+		"branch-alias": {
+			"dev-draft": "0.1.x-dev"
+		}
+	}, 
+	"suggest": {
+		"symfony/cache": "For persistent class metadata caching"
+	}
+}
