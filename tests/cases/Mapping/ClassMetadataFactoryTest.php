@@ -13,8 +13,8 @@ use NoreSources\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Persistence\Mapping\Driver\ReflectionDriver;
 use NoreSources\Persistence\TestData\User;
 use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
-use Symfony\Component\Cache\Simple\ArrayCache;
 use Redis;
 
 class ClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
@@ -24,7 +24,7 @@ class ClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 	{
 		$cacheItemPool = $this->createRedisCache();
 		if (!$cacheItemPool)
-			$cacheItemPool = new ArrayCache();
+			$cacheItemPool = new ArrayAdapter();
 
 		$this->assertInstanceOf(CacheItemPoolInterface::class,
 			$cacheItemPool, 'Cache item pool');
