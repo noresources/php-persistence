@@ -1,10 +1,11 @@
 {
 	"name": "noresources/persistence", 
-	"description": "Doctrine ODM Repository implementations", 
+	"description": "Doctrine Persistence component utility", 
 	"type": "library", 
 	"license": "MIT", 
 	"keywords": [
 		"Persistence", 
+		"Doctrine", 
 		"Reflection"
 	], 
 	"authors": [
@@ -44,7 +45,8 @@
 	}, 
 	"extra": {
 		"branch-alias": {
-			"dev-draft": "0.1.x-dev"
+			"dev-draft": "0.1.x-dev",
+			"dev-main": "0.2.x-dev"
 		}
 	}, 
 	"suggest": {
