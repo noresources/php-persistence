@@ -32,7 +32,7 @@ class ConfigurationTest extends \PHPUnit\Framework\TestCase
 				$configuration,
 				$method
 			]);
-			if (\class_exists($expected))
+			if (\is_string($expected) && \class_exists($expected))
 				$this->assertInstanceOf($expected, $actual, $method);
 			else
 				$this->assertEquals($expected, $actual, $method);
