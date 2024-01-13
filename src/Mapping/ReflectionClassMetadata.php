@@ -152,8 +152,13 @@ class ReflectionClassMetadata implements ClassMetadata
 		$p = $fields[$fieldName][self::KEY_PROPERTY];
 		if (\method_exists($p, 'getType'))
 		{
-			$f[self::KEY_TYPE] = $p->getType();
-			return $f[self::KEY_TYPE];
+			$reflectionType = $p->getType();
+			if (!empty($reflectionType) &&
+				\strcasecmp($reflectionType, 'null') != 0)
+			{
+				$f[self::KEY_TYPE] = $reflectionType;
+				return $f[self::KEY_TYPE];
+			}
 		}
 
 		$doc = new ReflectionDocComment($p->getDocComment());

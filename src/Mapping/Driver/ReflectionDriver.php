@@ -86,15 +86,11 @@ class ReflectionDriver implements MappingDriver
 	public static function parseIdGeneratorType($v,
 		ClassMetadata $metadata)
 	{
-		try
-		{
-			// Doctrine ORM ClassMetadata like
-			$t = self::getClassMetadataClassConstant($metadata,
-				'GENERATOR_TYPE_', \strtoupper($v));
+		// Doctrine ORM ClassMetadata like
+		$t = self::getClassMetadataClassConstant($metadata,
+			'GENERATOR_TYPE_', \strtoupper($v));
+		if ($t !== null)
 			return \intval($t);
-		}
-		catch (\Exception $e)
-		{}
 
 		return $v;
 	}
@@ -453,11 +449,18 @@ class ReflectionDriver implements MappingDriver
 	public static function getClassMetadataClassConstant(
 		$metadataOrmetadataClassName, $prefix, $suffix)
 	{
-		$class = (\is_object($metadataOrmetadataClassName) ? \get_class(
-			$metadataOrmetadataClassName) : $metadataOrmetadataClassName);
-		$name = \strtoupper($prefix) . \strtoupper($suffix);
-		$fullname = $class . '::' . $name;
-		return \constant($fullname);
+		try
+		{
+			$class = (\is_object($metadataOrmetadataClassName) ? \get_class(
+				$metadataOrmetadataClassName) : $metadataOrmetadataClassName);
+			$name = \strtoupper($prefix) . \strtoupper($suffix);
+			$fullname = $class . '::' . $name;
+			return @\constant($fullname);
+		}
+		catch (\Exception $e)
+		{}
+		catch (\Error $e)
+		{}
 	}
 
 	/**
