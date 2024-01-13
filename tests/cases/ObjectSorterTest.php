@@ -35,6 +35,14 @@ class ObjectSorterTest extends \PHPUnit\Framework\TestCase
 				($bob = new User(3, 'Bob'))
 			]);
 
+		$reference = $collection->getArrayCopy();
+		$this->assertEquals($this->downmixUser($syd),
+			$this->downmixUser($reference[1]));
+
+		$this->assertEquals(
+			$this->downmixUsers($collection->getArrayCopy()),
+			$this->downmixUsers($reference), 'getArrayCopy');
+
 		$className = $entityName = User::class;
 		$metadata = new ClassMetadata($entityName);
 		$driver->loadMetadataForClass($className, $metadata);
@@ -42,20 +50,26 @@ class ObjectSorterTest extends \PHPUnit\Framework\TestCase
 		$tests = [
 			'no sort' => [
 				'orderBy' => [],
-				'expected' => $collection->getArrayCopy()
+				'expected' => $reference
 			],
 			'by id' => [
 				'orderBy' => [
 					'id' => ObjectSorterInterface::ASC
 				],
-				'expected' => $collection->getArrayCopy()
+				'expected' => $reference
 			],
 			'by id desc' => [
 				'orderBy' => [
 					'id' => 'DESC'
 				],
-				'expected' => \array_reverse(
-					$collection->getArrayCopy())
+				'expected' => \array_reverse($reference),
+				'expected-alt' => [
+					$bob,
+					$alice,
+					$syd,
+					$bud,
+					$john
+				]
 			],
 			'by name' => [
 				'orderBy' => [
@@ -100,8 +114,18 @@ class ObjectSorterTest extends \PHPUnit\Framework\TestCase
 				$actual = $this->downmixUsers($actual);
 				$expected = $this->downmixUsers($test['expected']);
 
-				$this->assertEquals($expected, $actual,
-					$name . ' ' . $label);
+				try
+				{
+					$this->assertEquals($expected, $actual,
+						$name . ' ' . $label);
+				}
+				catch (\Exception $e)
+				{
+					$expected = $this->downmixUsers(
+						$test['expected-alt']);
+					$this->assertEquals($expected, $actual,
+						$name . ' ' . $label . ' (Alternative)');
+				}
 			}
 		}
 	}

@@ -33,22 +33,27 @@ class DefaultObjectSorter implements ObjectSorterInterface
 
 	public function sortObjects(&$list, $orderBy)
 	{
-		uasort($list,
+		usort($list,
 			function ($a, $b) use ($orderBy) {
-				foreach ($orderBy as $name => $orientation)
-				{
-					$field = $this->getReflectionField($name);
-					$va = $field->getValue($a);
-					$vb = $field->getValue($b);
-					$c = $this->compareField($va, $vb);
-					if ($c == 0)
-						continue;
-					if ($orientation == self::DESC)
-						return -$c;
-					return $c;
-				}
-				return 0;
+				return $this->sortFunction($a, $b, $orderBy);
 			});
+	}
+
+	public function sortFunction($a, $b, $orderBy)
+	{
+		foreach ($orderBy as $name => $orientation)
+		{
+			$field = $this->getReflectionField($name);
+			$va = $field->getValue($a);
+			$vb = $field->getValue($b);
+			$c = $this->compareField($va, $vb);
+			if ($c == 0)
+				continue;
+			if ($orientation == self::DESC)
+				return -$c;
+			return $c;
+		}
+		return 0;
 	}
 
 	public function compareField($a, $b)
