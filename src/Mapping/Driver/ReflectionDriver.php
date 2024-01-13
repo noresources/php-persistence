@@ -56,7 +56,7 @@ class ReflectionDriver implements MappingDriver
 				$paths
 			];
 		foreach ($paths as $p)
-			assert(\kis_dir($p));
+			assert(\is_dir($p));
 		$this->paths = \array_map(
 			function ($p) {
 				return \realpath($p) . '/';
