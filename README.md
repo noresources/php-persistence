@@ -24,6 +24,7 @@ composer require noresources/persistence
 * Object property <-> POD map mapping interface and Reflection-based implementation
 * Object sorting interfaces
 * PSR Cache utility interfaces
+* EventManager utilities
 
 ## References
 * [Doctrine Persistence](https://github.com/doctrine/orm)
