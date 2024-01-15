@@ -88,6 +88,15 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				]
 			], $ormMeta, $basicMeta, $className);
 
+		$mapping = $basicMeta->getFieldMapping('name');
+		$this->assertIsArray($mapping, 'Field mapping');
+		$this->assertArrayHasKey('extra', $mapping, 'Mapping extra');
+		$extra = $mapping['extra'];
+		$this->assertArrayHasKey('parameterCase', $extra,
+
+			'Extra extra');
+		$this->assertEquals($extra['userDefined'], 'option',
+			'User-defined extra property');
 		//////////////////////////////////////////////////
 		$className = Bug::class;
 		$ormMeta = new ClassMetadata($className);

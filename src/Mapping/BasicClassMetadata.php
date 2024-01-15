@@ -10,6 +10,7 @@ namespace NoreSources\Persistence\Mapping;
 
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\Container\Container;
+use NoreSources\Persistence\Mapping\Traits\FieldMappingTrait;
 use NoreSources\Persistence\Mapping\Traits\IdGeneratorTypeClassnameTrait;
 use NoreSources\Persistence\Mapping\Traits\ReflectionServiceClassMetadataIdentifierValueTrait;
 use NoreSources\Reflection\ReflectionService;
@@ -23,6 +24,7 @@ class BasicClassMetadata implements ClassMetadata
 
 	use IdGeneratorTypeClassnameTrait;
 	use ReflectionServiceClassMetadataIdentifierValueTrait;
+	use FieldMappingTrait;
 
 	/**
 	 *
@@ -201,6 +203,8 @@ class BasicClassMetadata implements ClassMetadata
 
 	public function mapField($mapping)
 	{
+		$this->defaultMapField($mapping);
+
 		$fieldType = (Container::keyValue($mapping, 'id', false) ? self::FIELD_TYPE_ID : 0);
 		$this->fields[$mapping['fieldName']] = [
 			self::KEY_FIELD_TYPE => $fieldType,
@@ -213,6 +217,7 @@ class BasicClassMetadata implements ClassMetadata
 
 	public function mapAssociation($mapping)
 	{
+		$this->defaultMapField($mapping);
 		$this->fields[$mapping['fieldName']] = [
 			self::KEY_TARGET_CLASS => Container::keyValue($mapping,
 				'targetEntity')

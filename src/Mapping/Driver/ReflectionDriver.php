@@ -21,6 +21,7 @@ use NoreSources\Reflection\ReflectionFile;
 use NoreSources\Text\Text;
 use NoreSources\Type\TypeConversion;
 use NoreSources\Type\TypeDescription;
+use Closure;
 use ReflectionClass;
 
 /**
@@ -41,6 +42,35 @@ class ReflectionDriver implements MappingDriver
 	 * as a lifecycle callback
 	 */
 	const LIFECYCLE_METHOD_AUTO_MAPPING = 0x02;
+
+	const TAG_ENTITY = 'entity';
+
+	const TAG_FIELD = 'field';
+
+	const TAG_ID = 'id';
+
+	const TAG_MANY_TO_MANY = 'many-to-many';
+
+	const TAG_MANY_TO_ONE = 'many-to-one';
+
+	const TAG_ONE_TO_MANY = 'one-to-many';
+
+	const TAG_ONE_TO_ONE = 'one-to-one';
+
+	/**
+	 * Field mapping options.
+	 *
+	 * @var string
+	 */
+	const TAG_OPTIONS = 'options';
+
+	/**
+	 * Extra field metadata that should be used for other purpose than object mapping (ex.
+	 * UI attributes).
+	 *
+	 * @var string
+	 */
+	const TAG_EXTRA = 'extra';
 
 	/**
 	 *
@@ -115,17 +145,17 @@ class ReflectionDriver implements MappingDriver
 		$metadataClassName = \get_class($metadata);
 		$instantiator = new Instantiator();
 		$cls = new \ReflectionClass($className);
-		$defaultInstance = $instantiator->instantiate($className);
 		$filename = $cls->getFileName();
 		assert($this->isInPaths($filename));
 
 		$file = new ReflectionFile($filename);
 		$block = new ReflectionDocComment($cls->getDocComment());
 
-		if (!$this->hasTag($block, 'entity'))
+		if (!$this->hasTag($block, self::TAG_ENTITY))
 			return;
 
-		$entity = $this->getTag($block, 'entity');
+		$defaultInstance = $instantiator->instantiate($className);
+		$entity = $this->getTag($block, self::TAG_ENTITY);
 		$entityParameters = self::getEntityTagParametersDescriptor();
 		$entityOptions = [];
 
@@ -260,19 +290,19 @@ class ReflectionDriver implements MappingDriver
 		$propertyTagParameters = self::getPropertyTagParametersDescriptor();
 
 		$associations = [
-			'many-to-many' => [
+			self::TAG_MANY_TO_MANY => [
 				self::class,
 				'getManyToManyTagParametersDescriptor'
 			],
-			'many-to-one' => [
+			self::TAG_MANY_TO_ONE => [
 				self::class,
 				'getManyToOneTagParametersDescriptor'
 			],
-			'one-to-many' => [
+			self::TAG_ONE_TO_MANY => [
 				self::class,
 				'getOneToManyTagParametersDescriptor'
 			],
-			'one-to-one' => [
+			self::TAG_ONE_TO_ONE => [
 				self::class,
 				'getOneToOneTagParametersDescriptor'
 			]
@@ -294,20 +324,21 @@ class ReflectionDriver implements MappingDriver
 			];
 			$mapFunction = null;
 
-			if ($this->hasTag($block, 'field'))
+			if ($this->hasTag($block, self::TAG_FIELD))
 			{
 				$mapFunction = 'mapField';
-				if (($field = $this->getTag($block, 'field')) !== null)
+				if (($field = $this->getTag($block, self::TAG_FIELD)) !==
+					null)
 					$this->parseParameters($mapping, $field, $metadata,
 						\array_merge($propertyTagParameters,
 							self::getFieldTagParametersDescriptor(
 								$metadata)));
 			} // field
 
-			if ($this->hasTag($block, 'id'))
+			if ($this->hasTag($block, self::TAG_ID))
 			{
 				$mapFunction = 'mapField';
-				if (($id = $this->getTag($block, 'id')) !== null)
+				if (($id = $this->getTag($block, self::TAG_ID)) !== null)
 					$this->parseParameters($mapping, $id, $metadata,
 						self::getIdTagParametersDescriptor($metadata));
 				$mapping['id'] = true;
@@ -335,7 +366,7 @@ class ReflectionDriver implements MappingDriver
 				$this->parseParameters($mapping, $tag, $metadata,
 					call_user_func($f, $metadata));
 
-				if ($this->hasTag($block, 'id'))
+				if ($this->hasTag($block, self::TAG_ID))
 					$mapping['id'] = true;
 
 				if (!isset($mapping['targetEntity']))
@@ -363,6 +394,34 @@ class ReflectionDriver implements MappingDriver
 				$mapping['fieldName'] = $property->getName();
 			}
 
+			if (!$mapFunction)
+				continue;
+
+			foreach ([
+				self::TAG_OPTIONS,
+				self::TAG_EXTRA
+			] as $tag)
+			{
+				if (!$this->hasTag($block, $tag))
+					continue;
+				$text = $this->getTag($block, $tag);
+				if (\strlen($text) == 0)
+					continue;
+				$parameters = [];
+				ParameterMapSerializer::unserializeParameters(
+					$parameters, $text);
+				if (!isset($mapping[$tag]))
+					$mapping[$tag] = [];
+				foreach ($parameters as $key => $variable)
+				{
+					$key = Text::toCamelCase($key);
+					if (Container::keyExists($mapping[$tag], $key))
+						throw new MappingException(
+							'Cannot override key ' . $key . ' of ' . $tag);
+					$mapping[$tag][$key] = $variable;
+				}
+			}
+
 			if ($mapFunction == 'mapField')
 				$this->setAutomaticMapping($mapping, $file, $property,
 					$block, $defaultInstance);
@@ -373,8 +432,6 @@ class ReflectionDriver implements MappingDriver
 					"setVersionMapping", $mapping);
 				unset($mapping['version']);
 			}
-			if (!$mapFunction)
-				continue;
 
 			self::invokeClassMetadataMethod($metadata, $mapFunction,
 				$mapping);
@@ -414,7 +471,7 @@ class ReflectionDriver implements MappingDriver
 						continue;
 					$text = $cls->getDocComment();
 					$block = new ReflectionDocComment($text);
-					if (!$this->hasTag($block, 'entity'))
+					if (!$this->hasTag($block, self::TAG_ENTITY))
 						continue;
 					$entities[] = $name;
 				}
@@ -491,6 +548,10 @@ class ReflectionDriver implements MappingDriver
 		$parameters = [];
 		ParameterMapSerializer::unserializeParameters($parameters, $text);
 
+		$closureThis = (object) [
+			'metadata' => $metadata
+		];
+
 		foreach ($parametersProperties as $key => $parameterProperties)
 		{
 			if (\is_integer($key) && \is_string($parameterProperties))
@@ -514,7 +575,10 @@ class ReflectionDriver implements MappingDriver
 			$value = $parameters[$key];
 			if (($f = Container::keyValue($parameterProperties,
 				'pre-set')))
-				$value = \call_user_func($f, $value, $metadata);
+				if ($f instanceof Closure)
+					$value = $f->call($closureThis, $value, $metadata);
+				else
+					$value = \call_user_func($f, $value, $metadata);
 
 			$value = TypeConversion::to($value, $type, $value);
 
@@ -901,16 +965,11 @@ class ReflectionDriver implements MappingDriver
 		return self::$propertyParametersDescriptor;
 	}
 
-	public static function getIdTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getIdTagParametersDescriptor()
 	{
 		if (!isset(self::$idTagParametersDescriptor))
-			self::$idTagParametersDescriptor = [];
-
-		$className = \get_class($metadata);
-		if (!isset(self::$idTagParametersDescriptor[$className]))
 		{
-			self::$idTagParametersDescriptor[$className] = \array_merge(
+			self::$idTagParametersDescriptor = \array_merge(
 				self::getPropertyTagParametersDescriptor(),
 				[
 					'generator',
@@ -920,18 +979,14 @@ class ReflectionDriver implements MappingDriver
 					'custom-id-generator-class'
 				]);
 		}
-		return self::$idTagParametersDescriptor[$className];
+		return self::$idTagParametersDescriptor;
 	}
 
-	public static function getFieldTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getFieldTagParametersDescriptor()
 	{
 		if (!isset(self::$fieldTagParametersDescriptor))
-			self::$fieldTagParametersDescriptor = [];
-		$className = \get_class($metadata);
-		if (!isset(self::$fieldTagParametersDescriptor[$className]))
 		{
-			self::$fieldTagParametersDescriptor[$className] = [
+			self::$fieldTagParametersDescriptor = [
 				'version',
 				'unique' => [
 					'pre-set' => [
@@ -953,10 +1008,11 @@ class ReflectionDriver implements MappingDriver
 						'stringToBoolean'
 					],
 					'type' => 'boolean',
-					'pre-set' => function ($v) use ($metadata) {
-						return self::getClassMetadataClassConstant(
-							$metadata, 'GENERATED_', $v);
-					}
+					'pre-set' => Closure::fromCallable(
+						function ($v) {
+							return self::getClassMetadataClassConstant(
+								$this->metadata, 'GENERATED_', $v);
+						})
 				],
 				'insertable' => [
 					'pre-set' => [
@@ -984,20 +1040,14 @@ class ReflectionDriver implements MappingDriver
 				]
 			];
 		}
-		return self::$fieldTagParametersDescriptor[$className];
+		return self::$fieldTagParametersDescriptor;
 	}
 
-	public static function getAssociationTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getAssociationTagParametersDescriptor()
 	{
 		if (!isset(self::$associationTagParametersDescriptor))
-			self::$associationTagParametersDescriptor = [];
-
-		$className = \get_class($metadata);
-		if (!isset(
-			self::$associationTagParametersDescriptor[$className]))
 		{
-			self::$associationTagParametersDescriptor[$className] = [
+			self::$associationTagParametersDescriptor = [
 				'target-entity',
 				'field' => [
 					'key' => 'fieldName'
@@ -1005,10 +1055,11 @@ class ReflectionDriver implements MappingDriver
 				'join-columns',
 				'fetch' => [
 					'type' => 'integer',
-					'pre-set' => function ($v) use ($metadata) {
-						return self::getClassMetadataClassConstant(
-							$metadata, 'FETCH_', $v);
-					}
+					'pre-set' => Closure::fromCallable(
+						function ($v) {
+							return self::getClassMetadataClassConstant(
+								$this->metadata, 'FETCH_', $v);
+						})
 				]
 
 			/**
@@ -1019,54 +1070,43 @@ class ReflectionDriver implements MappingDriver
 			 */
 			];
 		}
-		return self::$associationTagParametersDescriptor[$className];
+		return self::$associationTagParametersDescriptor;
 	}
 
-	public static function getManyToManyTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getManyToManyTagParametersDescriptor()
 	{
-		return self::getAssociationTagParametersDescriptor($metadata);
+		return self::getAssociationTagParametersDescriptor();
 	}
 
-	public static function getManyToOneTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getManyToOneTagParametersDescriptor()
 	{
 		if (!isset(self::$manyToOneTagParametersDescriptor))
-			self::$manyToOneTagParametersDescriptor = [];
-		$className = \get_class($metadata);
-		if (!isset(self::$manyToOneTagParametersDescriptor[$className]))
 		{
-			self::$manyToOneTagParametersDescriptor[$className] = \array_merge(
-				self::getAssociationTagParametersDescriptor($metadata),
+			self::$manyToOneTagParametersDescriptor = \array_merge(
+				self::getAssociationTagParametersDescriptor(),
 				[
 					'inversed-by'
 				]);
 		}
-		return self::$manyToOneTagParametersDescriptor[$className];
+		return self::$manyToOneTagParametersDescriptor;
 	}
 
-	public static function getOneToManyTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getOneToManyTagParametersDescriptor()
 	{
 		if (!isset(self::$oneToManyTagParametersDescriptor))
-			self::$oneToManyTagParametersDescriptor = [];
-		$className = \get_class($metadata);
-
-		if (!isset(self::$oneToManyTagParametersDescriptor[$className]))
 		{
-			self::$oneToManyTagParametersDescriptor[$className] = \array_merge(
-				self::getAssociationTagParametersDescriptor($metadata),
+			self::$oneToManyTagParametersDescriptor = \array_merge(
+				self::getAssociationTagParametersDescriptor(),
 				[
 					'mapped-by'
 				]);
 		}
-		return self::$oneToManyTagParametersDescriptor[$className];
+		return self::$oneToManyTagParametersDescriptor;
 	}
 
-	public static function getOneToOneTagParametersDescriptor(
-		ClassMetadata $metadata)
+	public static function getOneToOneTagParametersDescriptor()
 	{
-		return self::getAssociationTagParametersDescriptor($metadata);
+		return self::getAssociationTagParametersDescriptor();
 	}
 
 	/**

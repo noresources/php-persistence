@@ -31,6 +31,7 @@ class BasicEntity
 	 * The entity name
 	 *
 	 * @persistent-field
+	 * @persistent-extra user-defined=option; parameterCase="Camel case"
 	 * @var string
 	 */
 	public $name;
