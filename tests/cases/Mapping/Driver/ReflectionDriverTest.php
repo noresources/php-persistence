@@ -61,21 +61,21 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = BasicEntity::class;
-		$rdriver = new ReflectionDriver(
+		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
 			]);
 
 		$ormMeta = new ClassMetadata($className);
 		$basicMeta = new BasicClassMetadata($className);
-		$rdriver->loadMetadataForClass($className, $basicMeta);
+		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 		$ormMeta->wakeupReflection($reflectionService);
 
-		$xdriver = new XmlDriver(
+		$xmlDriver = new XmlDriver(
 			[
 				$this->getReferenceFileDirectory() . '/dcm/'
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
-		$xdriver->loadMetadataForClass($className, $ormMeta);
+		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 
 		$this->compareClassMetadata(
 			[
@@ -88,11 +88,12 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				]
 			], $ormMeta, $basicMeta, $className);
 
+		//////////////////////////////////////////////////
 		$className = Bug::class;
 		$ormMeta = new ClassMetadata($className);
 		$basicMeta = new BasicClassMetadata($className);
-		$rdriver->loadMetadataForClass($className, $basicMeta);
-		$xdriver->loadMetadataForClass($className, $ormMeta);
+		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 		$ormMeta->wakeupReflection($reflectionService);
 
 		$this->assertDerivedFile(
@@ -157,30 +158,30 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = CustomIdEntity::class;
-		$rdriver = new ReflectionDriver(
+		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
 			]);
 
 		$basicMeta = new BasicClassMetadata($className);
-		$rdriver->loadMetadataForClass($className, $basicMeta);
+		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 
 		$this->assertNotNull($basicMeta->customGeneratorDefinition,
 			TypeDescription::getLocalName($basicMeta) . ' using ' .
-			TypeDescription::getLocalName($rdriver) . ' ' .
+			TypeDescription::getLocalName($reflectionDriver) . ' ' .
 			' Custom generator ');
 
-		$xdriver = new XmlDriver(
+		$xmlDriver = new XmlDriver(
 			[
 				$this->getReferenceFileDirectory() . '/dcm/'
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
 		$ormMeta = new ClassMetadata($className);
 		$ormMeta->wakeupReflection($reflectionService);
-		$xdriver->loadMetadataForClass($className, $ormMeta);
+		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 
 		$this->assertNotNull($ormMeta->customGeneratorDefinition,
 			TypeDescription::getLocalName($ormMeta) . ' using ' .
-			TypeDescription::getLocalName($xdriver) . ' ' .
+			TypeDescription::getLocalName($xmlDriver) . ' ' .
 			' Custom generator ');
 	}
 
@@ -188,21 +189,21 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = EmbeddedObjectProperty::class;
-		$rdriver = new ReflectionDriver(
+		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
 			]);
 
 		$basicMeta = new BasicClassMetadata($className);
-		$rdriver->loadMetadataForClass($className, $basicMeta);
+		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 
-		$xdriver = new XmlDriver(
+		$xmlDriver = new XmlDriver(
 			[
 				$this->getReferenceFileDirectory() . '/dcm/'
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
 		$ormMeta = new ClassMetadata($className);
 		$ormMeta->wakeupReflection($reflectionService);
-		$xdriver->loadMetadataForClass($className, $ormMeta);
+		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 
 		$expected = [
 			'id',
@@ -324,22 +325,22 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			'schema' => 'Tests'
 		];
 
-		$xdriver = new XmlDriver(
+		$xmlDriver = new XmlDriver(
 			[
 				$this->getReferenceFileDirectory() . '/dcm/'
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
 		$xmeta = new ClassMetadata($className);
-		$xdriver->loadMetadataForClass($className, $xmeta);
+		$xmlDriver->loadMetadataForClass($className, $xmeta);
 		$this->assertEquals($className, $xmeta->name);
 		$this->assertEquals($table, $xmeta->table,
 			'$table property (XML)');
 
-		$rdriver = new ReflectionDriver(
+		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
 			]);
 		$rmeta = new ClassMetadata($className);
-		$rdriver->loadMetadataForClass($className, $rmeta);
+		$reflectionDriver->loadMetadataForClass($className, $rmeta);
 
 		foreach ([
 			'name',
@@ -354,9 +355,9 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			$this->assertEquals($xmeta->$property, $rmeta->$property,
 				$property . ' property of class metadata');
 
-			$xcn = $xdriver->getAllClassNames();
+			$xcn = $xmlDriver->getAllClassNames();
 			sort($xcn);
-			$rcn = $rdriver->getAllClassNames();
+			$rcn = $reflectionDriver->getAllClassNames();
 			sort($rcn);
 
 			$this->assertEquals($xcn, $rcn, 'Class names');
