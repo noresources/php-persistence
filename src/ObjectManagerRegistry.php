@@ -255,8 +255,12 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 			return $existing;
 		foreach ($this->objectManagers as $objectManager)
 		{
+			/**
+			 *
+			 * @var ClassMetadataFactory $factory
+			 */
 			$factory = $objectManager->getMetadataFactory();
-			if (!$factory->hasMetadataFor($className))
+			if ($factory->isTransient($className))
 				continue;
 			$this->classManager[$className] = $objectManager;
 			return $objectManager;

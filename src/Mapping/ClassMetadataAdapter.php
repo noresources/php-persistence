@@ -18,12 +18,39 @@ use NoreSources\Persistence\Id\IdGeneratorInterface;
 class ClassMetadataAdapter
 {
 
+	const MAPPING_ID = 'id';
+
+	const MAPPING_FIELD_NAME = 'fieldName';
+
+	/**
+	 * Field or association type
+	 *
+	 * @var string
+	 */
+	const MAPPING_TYPE = 'type';
+
+	const MAPPING_ONE_TO_ONE = 0x01;
+
+	const MAPPING_MANY_TO_ONE = 0x02;
+
+	const MAPPING_ONE_TO_MANY = 0x04;
+
+	const MAPPING_MANY_TO_MANY = 0x08;
+
+	const MAPPING_TO_ONE = self::MAPPING_ONE_TO_ONE |
+		self::MAPPING_MANY_TO_ONE;
+
+	const MAPPING_TO_MANY = self::MAPPING_ONE_TO_MANY |
+		self::MAPPING_MANY_TO_MANY;
+
+	const MAPPING_TARGET_CLASS = 'targetEntity';
+
 	/**
 	 *
 	 * @param string $className
 	 *        	Object class name
 	 * @param ClassMetadata $fromMetadata
-	 * @return unknown|string Qualified object class name
+	 * @return string Qualified object class name
 	 */
 	public static function getFullyQualifiedClassName($className,
 		ClassMetadata $fromMetadata = null)
@@ -79,5 +106,88 @@ class ClassMetadataAdapter
 			\method_exists($idGenerator, 'generate'))
 			return $idGenerator;
 		return null;
+	}
+
+	public static function retrieveMetadataProperty(&$value,
+		ClassMetadata $metadata, $name)
+	{
+		try
+		{
+			$value = Container::keyValue($metadata, $name, $value);
+			return true;
+		}
+		catch (\Exception $e)
+		{}
+		return false;
+	}
+
+	/**
+	 * Attempt to read ClassMetadata element by invoking a getter method or by getting a class
+	 * property
+	 *
+	 * @param mixed $value
+	 *        	Output value
+	 * @param ClassMetadata $metadata
+	 * @param string $name
+	 *        	Method, property or array offset to get
+	 * @param mixed[] ...$arguments
+	 *        	Method argument(s)
+	 * @return boolean TRUE if value wasobtained
+	 */
+	public static function retrieveMetadataElement(&$value,
+		ClassMetadata $metadata, $name, ...$arguments)
+	{
+		if (self::invokeMetadataMethod($value, $metadata, $name,
+			...$arguments))
+			return true;
+
+		if (Container::count($arguments) != 0)
+			return false;
+
+		return self::retrieveMetadataProperty($value, $metadata, $name);
+	}
+
+	public static function invokeMetadataMethod(&$returned,
+		ClassMetadata $metadata, $name, ...$arguments)
+	{
+		if (!\method_exists($metadata, $name))
+			return false;
+		$returned = \call_user_func_array([
+			$metadata,
+			$name
+		], $arguments);
+		return true;
+	}
+
+	/**
+	 * Attempt to set metadata element by invoking a method or by setting a property
+	 *
+	 * @param ClassMetadata $metadata
+	 * @param string $name
+	 *        	Metadata method, property or array offset
+	 * @param mixed[] ...$arguments
+	 *        	Method argument(s)
+	 * @return boolean TRUE if a method was successfully called or a property was set
+	 */
+	public static function assignMetadataElement(
+		ClassMetadata $metadata, $name, ...$arguments)
+	{
+		$returned = null;
+		if (self::invokeMetadataMethod($returned, $metadata, $name,
+			...$arguments))
+			return true;
+
+		if (Container::count($arguments) != 1)
+			return false;
+
+		try
+		{
+			Container::setValue($metadata, $name,
+				Container::firstValue($arguments));
+			return true;
+		}
+		catch (\Exception $e)
+		{}
+		return false;
 	}
 }

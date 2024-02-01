@@ -15,6 +15,7 @@ use Doctrine\Persistence\Mapping\Driver\MappingDriver;
 use NoreSources\Persistence\Cache\CacheItemPoolAwareInterface;
 use NoreSources\Persistence\Cache\CacheItemPoolProviderInterface;
 use NoreSources\Persistence\Cache\Traits\CacheItemPoolReferenceTrait;
+use NoreSources\Persistence\Mapping\GenericClassMetadataFactory;
 use NoreSources\Persistence\Mapping\Driver\MappingDriverProviderInterface;
 use Psr\Container\ContainerInterface;
 use ArrayAccess;
@@ -81,7 +82,7 @@ class Configuration implements MappingDriverProviderInterface,
 		{
 			if (isset($this->mappingDriver))
 			{
-				$this->metadataFactory = new \NoreSources\Persistence\Mapping\ClassMetadataFactory(
+				$this->metadataFactory = new GenericClassMetadataFactory(
 					$this->mappingDriver);
 			}
 		}

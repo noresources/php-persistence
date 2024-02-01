@@ -56,12 +56,19 @@ class ObjectManagerRegistryClassMetadataFactory implements
 
 	public function isTransient($className)
 	{
-		$objectManager = $this->registry->findObjectManagerForClass(
-			$className);
-		if ($objectManager)
-			return $objectManager->getMetadataFactory()->isTransient(
-				$className);
-		return isset($this->metadata[$className]);
+		foreach ($this->registry->getIterator() as $manager)
+		{
+			/**
+			 *
+			 * @var ObjectManager $manager
+			 * @var \Doctrine\ORM\Mapping\ClassMetadataFactory $factory
+			 */
+			$factory = $manager->getMetadataFactory();
+			if (!$factory->isTransient($className))
+				return false;
+		}
+
+		return true;
 	}
 
 	public function getMetadataFor($className)

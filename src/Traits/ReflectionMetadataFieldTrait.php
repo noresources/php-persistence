@@ -87,7 +87,8 @@ trait ReflectionMetadataFieldTrait
 		$mask = (ReflectionServiceInterface::ALLOW_RW_METHODS |
 			ReflectionServiceInterface::FORCE_RW_METHODS);
 		$flags = ReflectionServiceInterface::RW |
-			ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY;
+			ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY |
+			ReflectionServiceInterface::EXPOSE_INHERITED_PROPERTY;
 
 		$flags |= ($mask & $this->getReflectionFieldFlags());
 

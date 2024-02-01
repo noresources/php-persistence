@@ -15,7 +15,7 @@ use NoreSources\Type\TypeDescription;
 /**
  * Id generator related method for ClassMetadata implementations.
  *
- * @use-by BasicClassMetadata
+ * @use-by GenericClassMetadata
  * @used-by ReflectionClassMetadata
  *
  */

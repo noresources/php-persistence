@@ -11,7 +11,7 @@ namespace NoreSources\Persistence\Mapping;
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\Persistence\Event\Event;
 use NoreSources\Persistence\Mapping\Traits\IdGeneratorTypeClassnameTrait;
-use NoreSources\Persistence\Mapping\Traits\ReflectionServiceClassMetadataIdentifierValueTrait;
+use NoreSources\Persistence\Mapping\Traits\ReflectionServiceIdentifierValueClassMetadataTrait;
 use NoreSources\Reflection\ReflectionDocComment;
 use NoreSources\Reflection\ReflectionFile;
 use NoreSources\Reflection\ReflectionService;
@@ -28,7 +28,14 @@ class ReflectionClassMetadata implements ClassMetadata
 {
 
 	use IdGeneratorTypeClassnameTrait;
-	use ReflectionServiceClassMetadataIdentifierValueTrait;
+	use ReflectionServiceIdentifierValueClassMetadataTrait;
+
+	/**
+	 * Embed parent fields and associations
+	 *
+	 * @var integer
+	 */
+	const EMBED_PARENT = 0x04;
 
 	const DEFAULT_ID_FIELD_NAME = 'id';
 
@@ -38,15 +45,18 @@ class ReflectionClassMetadata implements ClassMetadata
 
 	public $lifecycleCallbacks;
 
+	public $isMappedSuperClass = false;
+
 	/**
 	 *
 	 * @param string|object $class
 	 *        	Object or class name
 	 */
-	public function __construct($class)
+	public function __construct($class, $flags = 0)
 	{
 		if (\is_object($class))
 			$class = \get_class($class);
+		$this->reflectionMappingFlags = $flags;
 		if (!\is_string($class))
 			throw new \InvalidArgumentException(
 				'$class must be a class name or class instance. Got ' .
@@ -67,6 +77,7 @@ class ReflectionClassMetadata implements ClassMetadata
 				$this->lifecycleCallbacks[$eventName] = [
 					$eventName
 				];
+			$this->isMappedSuperClass = $this->getReflectionClass()->isAbstract();
 		}
 	}
 
@@ -82,43 +93,68 @@ class ReflectionClassMetadata implements ClassMetadata
 		return $this->classNameBasedIdentifierFieldName;
 	}
 
-	public function getReflectionService()
+	/**
+	 *
+	 * @return \NoreSources\Reflection\ReflectionServiceInterface
+	 */
+	public final function getReflectionService()
 	{
 		if (!isset($this->reflectionService))
 			$this->reflectionService = ReflectionService::getInstance();
 		return $this->reflectionService;
 	}
 
-	public function getFields()
+	/**
+	 *
+	 * @return array
+	 */
+	public function getFieldMappings()
 	{
-		if (!isset($this->fields))
+		if (!isset($this->fieldMappings))
 		{
-			$this->fields = [];
+			$embed = ($this->reflectionMappingFlags & self::EMBED_PARENT) ==
+				self::EMBED_PARENT;
+			$this->fieldMappings = [];
 			$cls = $this->getReflectionClass();
 			$flags = ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY |
 				ReflectionServiceInterface::RW;
 			foreach ($cls->getProperties() as $p)
-				$this->fields[$p->getName()] = [
+			{
+				if (!$embed && $this->isParentProperty($p))
+					continue;
+				$this->fieldMappings[$p->getName()] = [
 					self::KEY_PROPERTY => $this->getReflectionService()->getReflectionProperty(
 						$cls, $p->getName(), $flags)
 				];
+			}
+
+			if ($embed)
+			{
+				$base = $cls;
+				while (($base = $base->getParentClass()))
+				{
+					foreach ($base->getProperties() as $p)
+					{
+						if (\array_key_exists($p->getName(),
+							$this->reflectionMappingFlags))
+							continue;
+						$this->fieldMappings[$p->getName()] = [
+							self::KEY_PROPERTY => $this->getReflectionService()->getReflectionProperty(
+								$cls, $p->getName(), $flags)
+						];
+					}
+				}
+			}
 		}
-		return $this->fields;
+		return $this->fieldMappings;
 	}
 
 	public function getReflectionProperties()
 	{
-		if (!isset($this->reflectionProperties))
-		{
-			$this->reflectionProperties = [];
-			$cls = $this->getReflectionClass();
-			$flags = ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY |
-				ReflectionServiceInterface::RW;
-			foreach ($cls->getProperties() as $p)
-				$this->reflectionProperties[$p->getName()] = $this->getReflectionService()->getReflectionProperty(
-					$cls, $p->getName(), $flags);
-		}
-		return $this->reflectionProperties;
+		return \array_map(
+			function ($e) {
+				return $e[self::KEY_PROPERTY];
+			}, $this->getFieldMappings());
 	}
 
 	public function isIdentifier($fieldName)
@@ -137,11 +173,11 @@ class ReflectionClassMetadata implements ClassMetadata
 
 	public function getTypeOfField($fieldName)
 	{
-		$fields = $this->getFields();
-		if (!\array_key_exists($fieldName, $fields))
+		$fieldMappings = $this->getFieldMappings();
+		if (!\array_key_exists($fieldName, $fieldMappings))
 			throw new \InvalidArgumentException(
 				$fieldName . ' is not a field of ' . $this->className);
-		$f = $fields[$fieldName];
+		$f = $fieldMappings[$fieldName];
 		if (isset($f[self::KEY_TYPE]))
 			return $f[self::KEY_TYPE];
 
@@ -149,7 +185,7 @@ class ReflectionClassMetadata implements ClassMetadata
 		 *
 		 * @var ReflectionProperty $p
 		 */
-		$p = $fields[$fieldName][self::KEY_PROPERTY];
+		$p = $fieldMappings[$fieldName][self::KEY_PROPERTY];
 		if (\method_exists($p, 'getType'))
 		{
 			$reflectionType = $p->getType();
@@ -198,14 +234,14 @@ class ReflectionClassMetadata implements ClassMetadata
 		return $f[self::KEY_TYPE];
 	}
 
-	public function getAssociationMappedByTargetField($assocName)
+	public function getAssociationMappedByTargetField($associationName)
 	{
 		return null;
 	}
 
 	public function getFieldNames()
 	{
-		return \array_keys($this->getFields());
+		return \array_keys($this->getFieldMappings());
 	}
 
 	public function getIdentifierFieldNames()
@@ -250,10 +286,10 @@ class ReflectionClassMetadata implements ClassMetadata
 	{
 		$names = $this->getIdentifierFieldNames();
 		$values = [];
-		$fields = $this->getFields();
+		$fieldMappings = $this->getFieldMappings();
 		foreach ($names as $name)
 		{
-			$values[$name] = $fields[$name][self::KEY_PROPERTY]->getValue(
+			$values[$name] = $fieldMappings[$name][self::KEY_PROPERTY]->getValue(
 				$object);
 		}
 		return $values;
@@ -290,7 +326,7 @@ class ReflectionClassMetadata implements ClassMetadata
 
 	public function hasField($fieldName)
 	{
-		return \array_key_exists($fieldName, $this->getFields());
+		return \array_key_exists($fieldName, $this->getFieldMappings());
 	}
 
 	public function isSingleValuedAssociation($fieldName)
@@ -300,26 +336,37 @@ class ReflectionClassMetadata implements ClassMetadata
 				self::ASSOCIATION_FIELD_NAME_SUFFIX);
 	}
 
-	public function getAssociationTargetClass($assocName)
+	public function getAssociationTargetClass($associationName)
 	{
 		/**
 		 *
 		 * @todo use ReflectionDocComment
 		 */
-		$length = \strlen($assocName);
-		$name = \substr($assocName, 0,
+		$length = \strlen($associationName);
+		$name = \substr($associationName, 0,
 			$length -
 			\strlen(self::COLLECTION_ASSOCIATION_FIELD_NAME_SUFFIX));
 		return Text::toPascalCase($name);
 	}
 
-	public function isAssociationInverseSide($assocName)
+	public function isAssociationInverseSide($associationName)
 	{
 		/**
 		 *
 		 * @todo ?
 		 */
 		return false;
+	}
+
+	/**
+	 *
+	 * @param \ReflectionProperty $property
+	 * @return boolean
+	 */
+	private function isParentProperty(\ReflectionProperty $property)
+	{
+		return \strcasecmp($this->className,
+			$property->getDeclaringClass()->getName()) != 0;
 	}
 
 	/**
@@ -359,5 +406,11 @@ class ReflectionClassMetadata implements ClassMetadata
 	 *
 	 * @var array
 	 */
-	private $fields;
+	private $fieldMappings;
+
+	/**
+	 *
+	 * @var integer
+	 */
+	private $reflectionMappingFlags = 0;
 }

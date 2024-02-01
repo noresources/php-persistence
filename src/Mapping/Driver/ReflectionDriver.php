@@ -15,6 +15,7 @@ use Doctrine\Persistence\Mapping\Driver\MappingDriver;
 use NoreSources\Container\Container;
 use NoreSources\Http\ParameterMapSerializer;
 use NoreSources\Persistence\Event\Event;
+use NoreSources\Persistence\Mapping\ClassMetadataAdapter;
 use NoreSources\Reflection\ReflectionConstant;
 use NoreSources\Reflection\ReflectionDocComment;
 use NoreSources\Reflection\ReflectionFile;
@@ -23,6 +24,7 @@ use NoreSources\Type\TypeConversion;
 use NoreSources\Type\TypeDescription;
 use Closure;
 use ReflectionClass;
+use ReflectionProperty;
 
 /**
  * A mapping driver that use Reflection and DocComments to generate class metadata
@@ -42,6 +44,13 @@ class ReflectionDriver implements MappingDriver
 	 * as a lifecycle callback
 	 */
 	const LIFECYCLE_METHOD_AUTO_MAPPING = 0x02;
+
+	/**
+	 * Embed parent fields and associations
+	 *
+	 * @var integer
+	 */
+	const EMBED_PARENT = 0x04;
 
 	const TAG_ENTITY = 'entity';
 
@@ -142,37 +151,59 @@ class ReflectionDriver implements MappingDriver
 	 */
 	public function loadMetadataForClass($className, $metadata)
 	{
-		$metadataClassName = \get_class($metadata);
-		$instantiator = new Instantiator();
-		$cls = new \ReflectionClass($className);
-		$filename = $cls->getFileName();
-		assert($this->isInPaths($filename));
-
+		$reflectionClass = new \ReflectionClass($className);
+		$filename = $reflectionClass->getFileName();
 		$file = new ReflectionFile($filename);
-		$block = new ReflectionDocComment($cls->getDocComment());
+		if (!$this->isInPaths($filename))
+			throw new MappingException('Out of path class');
+
+		$block = new ReflectionDocComment(
+			$reflectionClass->getDocComment());
 
 		if (!$this->hasTag($block, self::TAG_ENTITY))
+		{
+			self::invokeClassMetadataMethod($metadata,
+				'isMappedSuperClass', $reflectionClass->isAbstract());
 			return;
+		}
 
-		$defaultInstance = $instantiator->instantiate($className);
+		$defaultInstance = null;
+		if (!$reflectionClass->isAbstract())
+		{
+			$instantiator = new Instantiator();
+			$defaultInstance = $instantiator->instantiate($className);
+		}
 		$entity = $this->getTag($block, self::TAG_ENTITY);
 		$entityParameters = self::getEntityTagParametersDescriptor();
 		$entityOptions = [];
 
-		self::parseParameters($entityOptions, $entity, $metadata,
-			self::getEntityTagParametersDescriptor());
+		if (!empty($entity))
+		{
+			$entityParameters = self::getEntityTagParametersDescriptor();
+			self::parseParameters($entityOptions, $entity, $metadata,
+				self::getEntityTagParametersDescriptor());
+			if (($repositoryClass = Container::keyValue($entityOptions,
+				'repositoryClass')))
+				self::invokeClassMetadataMethod($metadata,
+					"setCustomRepositoryClass", $repositoryClass);
+			if (Container::keyValue($entityOptions, 'readOnly', false) ===
+				true)
+				self::invokeClassMetadataMethod($metadata,
+					"markReadOnly");
+		}
 
-		if (($repositoryClass = Container::keyValue($entityOptions,
-			'repositoryClass')))
-			self::invokeClassMetadataMethod($metadata,
-				"setCustomRepositoryClass", $repositoryClass);
-		if (Container::keyValue($entityOptions, 'readOnly', false) ===
-			true)
-			self::invokeClassMetadataMethod($metadata, "markReadOnly");
+		$isMappedSuperClass = false;
+		if (($mappedSuperclass = Container::keyValue($entityOptions,
+			'mappedSuperclass')) !== null)
+			$isMappedSuperClass = $mappedSuperclass;
+		else
+			$isMappedSuperClass = $reflectionClass->isAbstract();
+
+		self::invokeClassMetadataMethod($metadata, 'isMappedSuperClass',
+			$isMappedSuperClass);
 
 		/**
 		 *
-		 * @todo mapped-superclass
 		 * @todo embeddable
 		 * @todo cacch
 		 * @todo named-query
@@ -194,7 +225,7 @@ class ReflectionDriver implements MappingDriver
 			if (Container::count($lifeCycleCallbacks) == 1 &&
 				Container::count($parameters) == 0)
 			{
-				$class = $cls->getName();
+				$class = $reflectionClass->getName();
 				$parameters = $this->getEventParameters();
 				foreach ($parameters as $parameter => $event)
 				{
@@ -224,8 +255,8 @@ class ReflectionDriver implements MappingDriver
 				if (self::invokeClassMetadataMethod($metadata,
 					"hasLifecycleCallbacks", $event))
 					continue;
-				if ($cls->hasMethod($event) &&
-					($method = $cls->getMethod($event)) &&
+				if ($reflectionClass->hasMethod($event) &&
+					($method = $reflectionClass->getMethod($event)) &&
 					(!$method->isStatic() && $method->isPublic()))
 				{
 					self::invokeClassMetadataMethod($metadata,
@@ -247,7 +278,8 @@ class ReflectionDriver implements MappingDriver
 					null, null);
 
 			$listenerClassName = $this->resolveClassname(
-				$listenerClassName, $file, $cls->getNamespaceName());
+				$listenerClassName, $file,
+				$reflectionClass->getNamespaceName());
 
 			unset($parameters['class']);
 			if (Container::count($parameters) == 0)
@@ -287,8 +319,22 @@ class ReflectionDriver implements MappingDriver
 		self::invokeClassMetadataMethod($metadata, "setPrimaryTable",
 			$primaryTable);
 
-		$propertyTagParameters = self::getPropertyTagParametersDescriptor();
+		$visited = [];
 
+		$this->processProperties($visited, $metadata, $file,
+			$reflectionClass, $defaultInstance);
+		if (($this->driverFlags & self::EMBED_PARENT) == 0)
+			return;
+		while (($reflectionClass = $reflectionClass->getParentClass()))
+			$this->processProperties($visited, $metadata, $file,
+				$reflectionClass, $defaultInstance);
+	}
+
+	public function processProperties(&$visited, ClassMetadata $metadata,
+		ReflectionFile $file, \ReflectionClass $reflectionClass,
+		$defaultInstance)
+	{
+		$propertyTagParameters = self::getPropertyTagParametersDescriptor();
 		$associations = [
 			self::TAG_MANY_TO_MANY => [
 				self::class,
@@ -307,14 +353,24 @@ class ReflectionDriver implements MappingDriver
 				'getOneToOneTagParametersDescriptor'
 			]
 		];
-
-		foreach ($cls->getProperties() as $property)
+		foreach ($reflectionClass->getProperties() as $property)
 		{
 			/**
+			 *
+			 * @var ReflectionProperty $property /**
 			 *
 			 * @todo attribute-overrides
 			 * @todo association-overrides
 			 */
+
+			if (\in_array($property->getName(), $visited))
+				continue;
+
+			$source = $property->getDeclaringClass();
+
+			if (\strcasecmp($reflectionClass->getName(),
+				$source->getName()))
+				continue;
 
 			$text = $property->getDocComment();
 			$block = new ReflectionDocComment($text);
@@ -435,6 +491,7 @@ class ReflectionDriver implements MappingDriver
 
 			self::invokeClassMetadataMethod($metadata, $mapFunction,
 				$mapping);
+			$visited[] = $property->getName();
 		} // Properties
 	}
 
@@ -448,6 +505,7 @@ class ReflectionDriver implements MappingDriver
 		foreach ($this->paths as $path)
 		{
 			$iterator = new \RecursiveDirectoryIterator($path);
+			$iterator = new \RecursiveIteratorIterator($iterator);
 			/**
 			 *
 			 * @var \SplFileInfo $item
@@ -464,12 +522,13 @@ class ReflectionDriver implements MappingDriver
 
 				$all = $file->getClassNames();
 				$entities = [];
+
 				foreach ($all as $name)
 				{
-					$cls = $file->getClass($name);
-					if (!($cls instanceof ReflectionClass))
+					$reflectionClass = $file->getClass($name);
+					if (!($reflectionClass instanceof ReflectionClass))
 						continue;
-					$text = $cls->getDocComment();
+					$text = $reflectionClass->getDocComment();
 					$block = new ReflectionDocComment($text);
 					if (!$this->hasTag($block, self::TAG_ENTITY))
 						continue;
@@ -486,11 +545,8 @@ class ReflectionDriver implements MappingDriver
 
 	public function isTransient($className)
 	{
-		if (isset($this->classNames))
-			if (Container::valueExists($this->classNames, $className))
-				return true;
-
-		return \in_array($className, $this->getAllClassNames());
+		$names = $this->getAllClassNames();
+		return !Container::valueExists($names, $className);
 	}
 
 	public static function stringToBoolean($v)
@@ -534,12 +590,8 @@ class ReflectionDriver implements MappingDriver
 	public static function invokeClassMetadataMethod($metadata, $method,
 		...$arguments)
 	{
-		if (!\method_exists($metadata, $method))
-			return;
-		return \call_user_func_array([
-			$metadata,
-			$method
-		], $arguments);
+		ClassMetadataAdapter::assignMetadataElement($metadata, $method,
+			...$arguments);
 	}
 
 	protected function parseParameters(&$output, $text,
@@ -651,8 +703,6 @@ class ReflectionDriver implements MappingDriver
 	protected static function setSpecialGenerator($type, $metadata,
 		&$mapping)
 	{
-		$metadataClassName = \get_class($metadata);
-
 		if (\strcasecmp($type, 'custom') == 0)
 		{
 			self::invokeClassMetadataMethod($metadata,
@@ -896,16 +946,16 @@ class ReflectionDriver implements MappingDriver
 		return [];
 		if (isset($this->lifeCycleEventParameters))
 			return $this->lifeCycleEventParameters;
-		$cls = $this->getEventConstantsClass();
+		$reflectionClass = $this->getEventConstantsClass();
 		$this->lifeCycleEventParameters = [];
 
 		/**
 		 *
 		 * @var ReflectionConstant $constant
 		 */
-		foreach ($cls->getConstants() as $name)
+		foreach ($reflectionClass->getConstants() as $name)
 		{
-			$key = \constant($cls->getName() . '::' . $name);
+			$key = \constant($reflectionClass->getName() . '::' . $name);
 			$parameter = Text::toKebabCase($key);
 			$this->lifeCycleEventParameters[$parameter] = $key;
 		}
