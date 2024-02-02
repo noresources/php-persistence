@@ -17,7 +17,7 @@ trait TestEntityManagerFactoryTrait
 {
 
 	private function createEntityManager(Configuration $configuration,
-		$databasePath, $classNames = array())
+		$databasePath, $classNames = array(), $initialize = true)
 	{
 		$params = [
 			'driver' => 'pdo_sqlite',
@@ -26,6 +26,9 @@ trait TestEntityManagerFactoryTrait
 
 		$connection = DriverManager::getConnection($params);
 		$em = new EntityManager($connection, $configuration);
+
+		if (!$initialize)
+			return $em;
 
 		if (\count($classNames) == 0)
 			$classNames = $configuration->getMetadataDriverImpl()->getAllClassNames();

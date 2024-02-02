@@ -8,6 +8,9 @@
 		</id>
 
 		<field name="name" type="string" />
+		<field name="nickname" type="string" />
+		<field name="secret" type="string" />
+		
 		<lifecycle-callbacks>
 			<lifecycle-callback type="prePersist" method="prePersistTask" />
 		</lifecycle-callbacks>

@@ -13,10 +13,9 @@ use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use Doctrine\Persistence\Mapping\RuntimeReflectionService;
-use NoreSources\Container\Container;
-use NoreSources\Persistence\Mapping\BasicClassMetadata;
 use NoreSources\Persistence\Mapping\ClassMetadataAdapter;
 use NoreSources\Persistence\Mapping\ClassMetadataReflectionPropertyMapper;
+use NoreSources\Persistence\Mapping\GenericClassMetadata;
 use NoreSources\Persistence\Mapping\Driver\ReflectionDriver;
 use NoreSources\Persistence\TestData\BasicEntity;
 use NoreSources\Persistence\TestData\Bug;
@@ -25,10 +24,10 @@ use NoreSources\Persistence\TestData\EmbeddedObjectProperty;
 use NoreSources\Persistence\TestData\ManyToOneEntity;
 use NoreSources\Persistence\TestData\Product;
 use NoreSources\Persistence\TestData\User;
+use NoreSources\Persistence\TestUtility\ResultComparisonTrait;
 use NoreSources\Persistence\TestUtility\TestEntityListener;
 use NoreSources\Persistence\TestUtility\TestEntityManagerFactoryTrait;
 use NoreSources\Test\DerivedFileTestTrait;
-use NoreSources\Type\TypeConversion;
 use NoreSources\Type\TypeDescription;
 
 class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
@@ -36,6 +35,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 
 	use DerivedFileTestTrait;
 	use TestEntityManagerFactoryTrait;
+	use ResultComparisonTrait;
 
 	public function setUp(): void
 	{
@@ -47,17 +47,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$this->tearDownDerivedFileTestTrait();
 	}
 
-	public function testConstruct()
-	{
-		$driver = new ReflectionDriver([]);
-		$this->assertInstanceOf(ReflectionDriver::class, $driver);
-	}
-
-	/**
-	 * Compare BasicClassMetadata populated by ReflectionDriver
-	 * agains Doctrine ORM ClassMetadata populated by XML driver
-	 */
-	public function testBasicClassMetadata()
+	public function testBasicEntity()
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = BasicEntity::class;
@@ -67,7 +57,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			]);
 
 		$ormMeta = new ClassMetadata($className);
-		$basicMeta = new BasicClassMetadata($className);
+		$basicMeta = new GenericClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 		$ormMeta->wakeupReflection($reflectionService);
 
@@ -77,9 +67,10 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
 		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 
-		$this->compareClassMetadata(
+		$this->compareImplementation(
 			[
-				'getName' => [],
+				'getName',
+				'getFieldNames',
 				'isIdentifier' => [
 					'id'
 				],
@@ -88,19 +79,40 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				]
 			], $ormMeta, $basicMeta, $className);
 
+		$directAccessIdGenerator = $basicMeta->idGenerator;
+		$this->assertNotNull($directAccessIdGenerator,
+			'ID generator (direct access)');
+		$adapterIdGenerator = ClassMetadataAdapter::getIdGenerator(
+			$basicMeta);
+		$this->assertNotNull($adapterIdGenerator,
+			'ID generator from adapter method');
+
 		$mapping = $basicMeta->getFieldMapping('name');
 		$this->assertIsArray($mapping, 'Field mapping');
 		$this->assertArrayHasKey('extra', $mapping, 'Mapping extra');
 		$extra = $mapping['extra'];
-		$this->assertArrayHasKey('parameterCase', $extra,
-
-			'Extra extra');
+		$this->assertArrayHasKey('parameterCase', $extra, 'Extra extra');
 		$this->assertEquals($extra['userDefined'], 'option',
 			'User-defined extra property');
 		//////////////////////////////////////////////////
+	}
+
+	public function testUser()
+	{
+		$reflectionService = new RuntimeReflectionService();
+		$reflectionDriver = new ReflectionDriver(
+			[
+				$this->getReferenceFileDirectory() . '/src'
+			]);
+		$xmlDriver = new XmlDriver(
+			[
+				$this->getReferenceFileDirectory() . '/dcm/'
+			], XmlDriver::DEFAULT_FILE_EXTENSION);
+
 		$className = Bug::class;
+
 		$ormMeta = new ClassMetadata($className);
-		$basicMeta = new BasicClassMetadata($className);
+		$basicMeta = new GenericClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 		$ormMeta->wakeupReflection($reflectionService);
@@ -115,7 +127,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$entity->setEngineer(new User());
 		$entity->setId(666);
 
-		$this->compareClassMetadata(
+		$this->compareImplementation(
 			[
 				'getFieldNames',
 				'hasField' => [
@@ -172,7 +184,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				$this->getReferenceFileDirectory() . '/src'
 			]);
 
-		$basicMeta = new BasicClassMetadata($className);
+		$basicMeta = new GenericClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 
 		$this->assertNotNull($basicMeta->customGeneratorDefinition,
@@ -203,7 +215,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				$this->getReferenceFileDirectory() . '/src'
 			]);
 
-		$basicMeta = new BasicClassMetadata($className);
+		$basicMeta = new GenericClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
 
 		$xmlDriver = new XmlDriver(
@@ -232,7 +244,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			'getFieldNames'
 		];
 
-		$this->compareClassMetadata($tests, $ormMeta, $basicMeta,
+		$this->compareImplementation($tests, $ormMeta, $basicMeta,
 			$className);
 
 		$mapper = new ClassMetadataReflectionPropertyMapper($basicMeta);
@@ -253,79 +265,6 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			'Embedded user');
 	}
 
-	private function compareClassMetadata($tests, $metaA, $metaB,
-		$testName)
-	{
-		foreach ($tests as $method => $arguments)
-		{
-			if (\is_integer($method) && \is_string($arguments))
-			{
-				$method = $arguments;
-				$arguments = [];
-			}
-
-			$label = $method . '(';
-			$label .= Container::implodeValues($arguments, ', ',
-				function ($a) {
-					try
-					{
-						return TypeConversion::toString($a);
-					}
-					catch (\Exception $e)
-					{
-						return TypeDescription::getName($a);
-					}
-				});
-			$label .= ')';
-
-			$callableA = [
-				$metaA,
-				$method
-			];
-			$callableB = [
-				$metaB,
-				$method
-			];
-
-			$this->assertIsCallable($callableA,
-				TypeDescription::getLocalName($metaA) . '::' . $method);
-			$this->assertIsCallable($callableB,
-				TypeDescription::getLocalName($metaA) . '::' . $method);
-
-			try
-			{
-				$expected = \call_user_func_array($callableA, $arguments);
-			}
-			catch (\Exception $e)
-			{
-				throw new \Exception(
-					TypeDescription::getLocalName($metaA) . ' | ' .
-					$label . ': ' . $e->getMessage());
-			}
-			try
-			{
-				$actual = \call_user_func_array($callableB, $arguments);
-			}
-			catch (\Exception $e)
-			{
-				throw new \Exception(
-					TypeDescription::getLocalName($metaB) . ' | ' .
-					$label . ': ' . $e->getMessage());
-			}
-
-			if (Container::isArray($expected) &&
-				Container::isArray($actual) &&
-				Container::isIndexed($expected))
-			{
-				sort($expected);
-				sort($actual);
-			}
-
-			$this->assertEquals($expected, $actual,
-				$testName . ' | ' . $label);
-		}
-	}
-
 	public function testCompareXMLDriver()
 	{
 		$className = BasicEntity::class;
@@ -338,30 +277,32 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			[
 				$this->getReferenceFileDirectory() . '/dcm/'
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
-		$xmeta = new ClassMetadata($className);
-		$xmlDriver->loadMetadataForClass($className, $xmeta);
-		$this->assertEquals($className, $xmeta->name);
-		$this->assertEquals($table, $xmeta->table,
+		$metadataFromXml = new ClassMetadata($className);
+		$xmlDriver->loadMetadataForClass($className, $metadataFromXml);
+		$this->assertEquals($className, $metadataFromXml->name);
+		$this->assertEquals($table, $metadataFromXml->table,
 			'$table property (XML)');
 
 		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
 			]);
-		$rmeta = new ClassMetadata($className);
-		$reflectionDriver->loadMetadataForClass($className, $rmeta);
+		$metadataFromReflection = new ClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className,
+			$metadataFromReflection);
 
 		foreach ([
 			'name',
 			'table'
 		] as $property)
 		{
-			$this->assertTrue(isset($xmeta->$property),
+			$this->assertTrue(isset($metadataFromXml->$property),
 				$property . ' is set for metadata from XML');
-			$this->assertTrue(isset($rmeta->$property),
+			$this->assertTrue(isset($metadataFromReflection->$property),
 				$property .
 				' is set for metadata from ReflectionDocComment');
-			$this->assertEquals($xmeta->$property, $rmeta->$property,
+			$this->assertEquals($metadataFromXml->$property,
+				$metadataFromReflection->$property,
 				$property . ' property of class metadata');
 
 			$xcn = $xmlDriver->getAllClassNames();

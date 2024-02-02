@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Persistence\ObjectIdentifier;
 use NoreSources\Persistence\TestData\User;
-use NoreSources\Persistence\TestUtility\TestMappingDriverClassMetadataFactory;
+use NoreSources\Persistence\TestUtility\TestClassMetadataFactory;
 
 class ObjectIdentifierTest extends \PHPUnit\Framework\TestCase
 {
@@ -26,7 +26,7 @@ class ObjectIdentifierTest extends \PHPUnit\Framework\TestCase
 			]);
 		$className = User::class;
 
-		$factory = new TestMappingDriverClassMetadataFactory();
+		$factory = new TestClassMetadataFactory();
 		$factory->setMappingDriver($mappingDriver);
 		$factory->setMetadataClass(ClassMetadata::class);
 		$this->assertInstanceOf(ClassMetadataFactory::class, $factory);
