@@ -87,6 +87,15 @@ trait FieldMappingClassMetadataTrait
 			false) ? true : fase;
 	}
 
+	/**
+	 * Get the given field type name
+	 *
+	 * Implements ClassMetadata interface.
+	 *
+	 * @param string $fieldName
+	 *        	Field name
+	 * @return string Type name
+	 */
 	public function getTypeOfField($fieldName)
 	{
 		return Container::treeValue($this->fieldMappings,
@@ -99,13 +108,18 @@ trait FieldMappingClassMetadataTrait
 	/**
 	 * Implements ClassMetadata interface.
 	 *
-	 * @param unknown $mapping
+	 * @param array $mapping
+	 *        	Field mapping data
 	 */
 	public function mapField($mapping)
 	{
 		$this->defaultMapField($mapping);
 	}
 
+	/**
+	 *
+	 * @param array $mapping
+	 */
 	public function addInheritedFieldMapping(array $mapping)
 	{
 		$this->defaultAddInheritedFieldMapping($mapping);

@@ -11,19 +11,20 @@ namespace NoreSources\Persistence\Mapping\Traits;
 trait EntityListenerClassMetadataTrait
 {
 
-	public function addEntityListener($event, $className, $method)
-	{
-		if (!isset($this->eventListeners[$event]))
-			$this->eventListeners[$event] = [];
-		$this->eventListeners[$event][] = [
-			$className,
-			$method
-		];
-	}
-
-	*
-	* @var array
-	*/
-	private
-$eventListeners = [];
+	/**
+	 *
+	 * public function addEntityListener($event, $className, $method)
+	 * {
+	 * if (!isset($this->eventListeners[$event]))
+	 * $this->eventListeners[$event] = [];
+	 * $this->eventListeners[$event][] = [
+	 * $className,
+	 * $method
+	 * ];
+	 * }
+	 *
+	 *
+	 * @var array
+	 */
+	private $eventListeners = [];
 }

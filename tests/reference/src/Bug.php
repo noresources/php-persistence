@@ -63,7 +63,7 @@ class Bug
 	/**
 	 * Mostly for tests
 	 *
-	 * @param unknown $id
+	 * @param integer $id
 	 */
 	public function setId($id)
 	{

@@ -827,10 +827,13 @@ class ReflectionDriver implements MappingDriver
 
 	/**
 	 *
-	 * @param unknown $mapping
+	 * @param array $mapping
+	 *        	Property mapping
 	 * @param ReflectionFile $file
+	 *        	Class file
 	 * @param \ReflectionProperty $property
-	 * @param unknown $types
+	 *        	Class property
+	 * @param array $types
 	 *        	List of type names from @var tag
 	 */
 	protected function setTypeAutomaticMapping(&$mapping,

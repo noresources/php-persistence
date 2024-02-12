@@ -46,7 +46,7 @@ class BasicEntity
 	/**
 	 * A property which won't be mapped to DB
 	 *
-	 * @var unknown
+	 * @var mixed
 	 */
 	public $notMapped;
 

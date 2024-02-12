@@ -17,12 +17,27 @@ trait LifecycleCallbackClassMetadataTrait
 	 */
 	public $lifecycleCallbacks = [];
 
+	/**
+	 * Indicates if object has a lifecycle callback for the given event name
+	 *
+	 * @param string $event
+	 *        	Event name
+	 * @return boolean
+	 */
 	public function hasLifecycleCallbacks($event)
 	{
 		return \array_key_exists($event, $this->lifecycleCallbacks) &&
 			\count($this->lifecycleCallbacks[$event]);
 	}
 
+	/**
+	 * Set the object lifecycle callback for ghe given event.
+	 *
+	 * @param string $event
+	 *        	Event name
+	 * @param string $method
+	 *        	Method name
+	 */
 	public function addLifecycleCallback($event, $method)
 	{
 		if (!\array_key_exists($event, $this->lifecycleCallbacks))

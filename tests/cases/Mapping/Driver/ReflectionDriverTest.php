@@ -97,7 +97,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		//////////////////////////////////////////////////
 	}
 
-	public function testUser()
+	public function testUserAndBugs()
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$reflectionDriver = new ReflectionDriver(
@@ -109,6 +109,34 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				$this->getReferenceFileDirectory() . '/dcm/'
 			], XmlDriver::DEFAULT_FILE_EXTENSION);
 
+		$className = User::class;
+
+		$ormMeta = new ClassMetadata($className);
+		$basicMeta = new GenericClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$xmlDriver->loadMetadataForClass($className, $ormMeta);
+		$ormMeta->wakeupReflection($reflectionService);
+
+		$this->compareImplementation(
+			[
+				'hasAssociation' => [
+					'reportedBugs'
+				],
+				'isAssociationInverseSide' => [
+					'reportedBugs'
+				],
+				'getAssociationMappedByTargetField' => [
+					'reportedBugs'
+				],
+				'getAssociationMappedByTargetField' => [
+					'assignedBugs'
+				],
+				'isAssociationInverseSide' => [
+					'assignedBugs'
+				]
+			], $ormMeta, $basicMeta, 'User metadata');
+
+		/////////////////////////////////////////////////////
 		$className = Bug::class;
 
 		$ormMeta = new ClassMetadata($className);
@@ -142,6 +170,12 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 					'created'
 				],
 				'hasAssociation' => [
+					'engineer'
+				],
+				'isAssociationInverseSide' => [
+					'id'
+				],
+				'isAssociationInverseSide' => [
 					'engineer'
 				],
 				'getIdentifierValues' => [

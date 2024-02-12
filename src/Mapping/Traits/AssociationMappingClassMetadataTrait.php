@@ -27,6 +27,15 @@ trait AssociationMappingClassMetadataTrait
 		return Container::keys($this->associationMappings);
 	}
 
+	/**
+	 * Indicates if assiciation targets a single value.
+	 *
+	 * Implements ClassMetadata interface.
+	 *
+	 * @param string $fieldName
+	 *        	Association name
+	 * @return boolean
+	 */
 	public function isSingleValuedAssociation($fieldName)
 	{
 		$m = Container::keyValue($this->associationMappings, $fieldName);
@@ -36,6 +45,15 @@ trait AssociationMappingClassMetadataTrait
 			ClassMetadataAdapter::MAPPING_TO_ONE) != 0;
 	}
 
+	/**
+	 * Indicates is association targets multiple values.
+	 *
+	 * Implements ClassMetadata interface.
+	 *
+	 * @param string $fieldName
+	 *        	Association name
+	 * @return boolean
+	 */
 	public function isCollectionValuedAssociation($fieldName)
 	{
 		$m = Container::keyValue($this->associationMappings, $fieldName);
@@ -48,44 +66,71 @@ trait AssociationMappingClassMetadataTrait
 	/**
 	 * Implements ClassMetadata interface.
 	 *
+	 * "inspired" by Doctrin ORM implementation.
+	 *
 	 * @param string $associationName
 	 *        	Association name
 	 * @return boolean
 	 */
 	public function isAssociationInverseSide($associationName)
 	{
-		/**
-		 *
-		 * @todo ?
-		 */
-		return false;
+		return !Container::treeValue($this->associationMappings,
+			[
+				$associationName,
+				'isOwningSide'
+			], true);
 	}
 
+	/**
+	 * MDoctrine ORM compatibility.
+	 *
+	 * @param array $mapping
+	 *        	Association mapping
+	 */
 	public function mapManyToMany($mapping)
 	{
-		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->defaultMapAssociation($mapping);
+		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->associationMappings[$k][ClassMetadataAdapter::MAPPING_TYPE] = ClassMetadataAdapter::MAPPING_MANY_TO_MANY;
 	}
 
+	/**
+	 * Doctrine ORM compatibility.
+	 *
+	 * @param array $mapping
+	 *        	Association mapping
+	 */
 	public function mapManyToOne($mapping)
 	{
-		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->defaultMapAssociation($mapping);
+		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->associationMappings[$k][ClassMetadataAdapter::MAPPING_TYPE] = ClassMetadataAdapter::MAPPING_MANY_TO_ONE;
 	}
 
+	/**
+	 * Doctrine ORM compatibility.
+	 *
+	 * @param array $mapping
+	 *        	Association mapping
+	 */
 	public function mapOneToMany($mapping)
 	{
-		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->defaultMapAssociation($mapping);
+		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->associationMappings[$k][ClassMetadataAdapter::MAPPING_TYPE] = ClassMetadataAdapter::MAPPING_ONE_TO_MANY;
 	}
 
+	/**
+	 *
+	 * Doctrine ORM compatibility.
+	 *
+	 * @param array $mapping
+	 *        	Association mapping
+	 */
 	public function mapOneToOne($mapping)
 	{
-		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->defaultMapAssociation($mapping);
+		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->associationMappings[$k][ClassMetadataAdapter::MAPPING_TYPE] = ClassMetadataAdapter::ONE_TO_ONE;
 	}
 
@@ -102,12 +147,30 @@ trait AssociationMappingClassMetadataTrait
 		return $this->associationMappings[$fieldName];
 	}
 
+	/**
+	 * Indicates if the given field has an association with another entity field.
+	 *
+	 * Implements ClassMetadata interface.
+	 *
+	 * @param string $fieldName
+	 *        	Field name
+	 * @return boolean
+	 */
 	public function hasAssociation($fieldName)
 	{
 		return Container::keyExists($this->associationMappings,
 			$fieldName);
 	}
 
+	/**
+	 * Get associated field class.
+	 *
+	 * Implements ClassMetadata interface.
+	 *
+	 * @param string $associationName
+	 *        	Association name
+	 * @return mixed|string|array|\Traversable
+	 */
 	public function getAssociationTargetClass($associationName)
 	{
 		return Container::treeValue($this->associationMappings,
@@ -117,17 +180,31 @@ trait AssociationMappingClassMetadataTrait
 			]);
 	}
 
+	/**
+	 *
+	 * @return array
+	 */
 	public function getAssociationMappings()
 	{
 		return $this->associationMappings;
 	}
 
+	/**
+	 * Get association mapped target.
+	 *
+	 * Implements ClassMetadata interface.
+	 *
+	 * @param string $associationName
+	 *        	Association name
+	 * @return string
+	 */
 	public function getAssociationMappedByTargetField($associationName)
 	{
-	/**
-	 *
-	 * @todo ?
-	 */
+		return Container::treeValue($this->associationMappings,
+			[
+				$associationName,
+				'mappedBy'
+			]);
 	}
 
 	/**
@@ -145,6 +222,12 @@ trait AssociationMappingClassMetadataTrait
 	{
 		$k = $mapping[ClassMetadataAdapter::MAPPING_FIELD_NAME];
 		$this->associationMappings[$k] = $mapping;
+
+		$isOwningSide = true;
+		if (Container::keyValue($mapping, 'mappedBy'))
+			$isOwningSide = false;
+
+		$this->associationMappings[$k]['isOwningSide'] = $isOwningSide;
 	}
 
 	protected function defaultAddInheritedAssociationMapping(
