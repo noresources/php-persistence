@@ -80,6 +80,7 @@ trait ResultComparisonTrait
 					$label . ' Cannot query ' . $method .
 					' property with arguments');
 			}
+
 			try
 			{
 				if ($callable)
@@ -90,7 +91,7 @@ trait ResultComparisonTrait
 			}
 			catch (\Exception $e)
 			{
-				throw new \Exception(
+				$expected = new \Exception(
 					TypeDescription::getLocalName($a) . ' | ' . $label .
 					': ' . $e->getMessage());
 			}
@@ -104,9 +105,11 @@ trait ResultComparisonTrait
 			}
 			catch (\Exception $e)
 			{
-				throw new \Exception(
-					TypeDescription::getLocalName($b) . ' | ' . $label .
-					': ' . $e->getMessage());
+				if (!($expected instanceof \Exception))
+					throw new \Exception(
+						TypeDescription::getLocalName($b) . ' | ' .
+						$label . ': ' . $e->getMessage());
+				$expected = $actual = 'exception';
 			}
 
 			if (Container::isArray($expected) &&
