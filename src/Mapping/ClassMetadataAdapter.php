@@ -108,6 +108,26 @@ class ClassMetadataAdapter
 		return null;
 	}
 
+	/**
+	 * Get ClassMetadata element or return default value
+	 *
+	 * @param ClassMetadata $metadata
+	 * @param string $name
+	 *        	Element name
+	 * @param mixed $dflt
+	 *        	Default value
+	 * @return mixed
+	 */
+	public static function getMetadataElement(ClassMetadata $metadata,
+		$name, $dflt = null)
+	{
+		$value = $dflt;
+		if (self::retrieveMetadataElement($value, $metadata, $name,
+			$arguments))
+			return $value;
+		return $dflt;
+	}
+
 	public static function retrieveMetadataProperty(&$value,
 		ClassMetadata $metadata, $name)
 	{

@@ -9,6 +9,7 @@
 namespace NoreSources\Persistence\TestCase\Mapping;
 
 use Doctrine\ORM\ORMSetup;
+use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\Persistence\Mapping\GenericClassMetadata;
 use NoreSources\Persistence\Mapping\GenericClassMetadataFactory;
 use NoreSources\Persistence\Mapping\Driver\ReflectionDriver;
@@ -55,6 +56,9 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 			$classes);
 		$genericFactory = $this->createGenericFactory();
 
+		$classes[] = TypeDescription::getLocalName(User::class, true);
+		$classes[] = '_Not_a_ClSs';
+
 		foreach ($classes as $className)
 		{
 			$this->compareImplementation(
@@ -66,9 +70,40 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 				'Metadata factory method concerning ' .
 				TypeDescription::getLocalName($className, true));
 
-			$ormMetadata = $ormFactory->getMetadataFor($className);
-			$genericMetadata = $genericFactory->getMetadataFor(
-				$className);
+			$ormMetadata = null;
+			$genericMetadata = null;
+			try
+			{
+				$ormMetadata = $ormFactory->getMetadataFor($className);
+			}
+			catch (\Exception $e)
+			{
+				$ormMetadata = $e;
+			}
+
+			try
+			{
+				$genericMetadata = $genericFactory->getMetadataFor(
+					$className);
+			}
+			catch (\Exception $e)
+			{
+				$genericMetadata = $e;
+			}
+
+			if (!($genericMetadata instanceof ClassMetadata))
+			{
+				if ($ormMetadata instanceof ClassMetadata)
+				{
+					$this->assertEquals(
+						TypeDescription::getName($ormMetadata),
+						TypeDescription::getName($genericMetadata),
+						$classeN . ' metadata');
+				}
+			}
+
+			if (!($ormMetadata instanceof ClassMetadata))
+				continue;
 
 			$this->compareImplementation(
 				[

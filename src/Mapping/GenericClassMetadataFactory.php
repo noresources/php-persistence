@@ -44,7 +44,11 @@ class GenericClassMetadataFactory extends AbstractClassMetadataFactory implement
 
 	protected function initializeReflection(ClassMetadata $class,
 		ReflectionService $reflService)
-	{}
+	{
+		$ignored = null;
+		ClassMetadataAdapter::invokeMetadataMethod($ignoed, $class,
+			'initializeReflection', $reflService);
+	}
 
 	protected function getDriver()
 	{
@@ -56,52 +60,139 @@ class GenericClassMetadataFactory extends AbstractClassMetadataFactory implement
 		array $nonSuperclassParents)
 	{
 		if ($parent)
-		{
-			foreach ([
-				'fields' => [
-					'mappingsProperty' => 'fieldMappings',
-					'mappingsGetter' => 'getFieldMappings',
-					'addMethod' => 'addInheritedFieldMapping',
-					'fallbackAddMethod' => 'mapField'
-				],
-				[
-					'mappingsProperty' => 'associationMappings',
-					'mappingsGetter' => 'getAssociationMappings',
-					'addMethod' => 'addInheritedAssociationMapping'
-				]
-			] as $set)
-			{
-				$mappings = null;
-
-				if (!ClassMetadataAdapter::invokeMetadataMethod(
-					$mappings, $parent, $set['mappingsGetter']))
-					ClassMetadataAdapter::retrieveMetadataProperty(
-						$mappings, $parent, $set['mappingsProperty']);
-
-				if (!Container::isTraversable($mappings))
-					continue;
-
-				$ignored = null;
-				foreach ($mappings as $mapping)
-				{
-					$this->addMappingInheritanceInformation($mapping,
-						$parent);
-
-					if (ClassMetadataAdapter::invokeMetadataMethod(
-						$ignored, $class, $set['addMethod'], $mapping))
-						continue;
-
-					if (!isset($set['fallbackAddMethod']))
-						continue;
-					ClassMetadataAdapter::invokeMetadataElement(
-						$ignored, $class, $set['fallbackAddMethod'],
-						$mapping);
-				}
-			}
-		}
+			$this->copyParentMetadata($class, $parent);
 
 		$this->getDriver()->loadMetadataForClass($class->getName(),
 			$class);
+
+		$this->finalizeMetadataRuntimeLoading($class, $parent,
+			$rootEntityFound, $nonSuperclassParents);
+	}
+
+	/**
+	 * Initialize class metadata by copying parent class metadata properties
+	 *
+	 * @param ClassMetadata $class
+	 *        	Child class metadata
+	 * @param ClassMetadata $parent
+	 *        	Parent class metadata
+	 */
+	protected function copyParentMetadata(ClassMetadata $class,
+		?ClassMetadata $parent)
+	{
+		foreach ([
+			'inheritanceType',
+			'discriminatorColumn',
+			'idGeneratorType',
+			'lifeCycleCallbacks'
+		] as $name => $value)
+		{
+			$arguments = [];
+			if (\is_integer($name))
+			{
+				$name = $value;
+				$value = null;
+			}
+
+			if (ClassMetadataAdapter::retrieveMetadataElement($value,
+				$parent, $name, ...$arguments))
+				ClassMetadataAdapter::assignMetadataElement($class,
+					$name, $value);
+		}
+
+		foreach ([
+			'fields' => [
+				'mappingsProperty' => 'fieldMappings',
+				'mappingsGetter' => 'getFieldMappings',
+				'addMethod' => 'addInheritedFieldMapping',
+				'fallbackAddMethod' => 'mapField'
+			],
+			'associations' => [
+				'mappingsProperty' => 'associationMappings',
+				'mappingsGetter' => 'getAssociationMappings',
+				'addMethod' => 'addInheritedAssociationMapping'
+			]
+		] as $set)
+		{
+			$mappings = null;
+
+			if (!ClassMetadataAdapter::invokeMetadataMethod($mappings,
+				$parent, $set['mappingsGetter']))
+				ClassMetadataAdapter::retrieveMetadataProperty(
+					$mappings, $parent, $set['mappingsProperty']);
+
+			if (!Container::isTraversable($mappings))
+				continue;
+
+			$ignored = null;
+			foreach ($mappings as $mapping)
+			{
+				$this->addMappingInheritanceInformation($mapping,
+					$parent);
+
+				if (ClassMetadataAdapter::invokeMetadataMethod($ignored,
+					$class, $set['addMethod'], $mapping))
+					continue;
+
+				if (!isset($set['fallbackAddMethod']))
+					continue;
+				ClassMetadataAdapter::invokeMetadataElement($ignored,
+					$class, $set['fallbackAddMethod'], $mapping);
+			}
+		}
+	}
+
+	/**
+	 * Class metadata loading post-processing
+	 *
+	 * @param ClassMetadata $class
+	 *        	Class metadata
+	 * @param ClassMetadata $parent
+	 *        	Parent class metadata
+	 * @param bool $rootEntityFound
+	 * @param array $nonSuperclassParents
+	 */
+	protected function finalizeMetadataRuntimeLoading(
+		ClassMetadata $class, ?ClassMetadata $parent,
+		bool $rootEntityFound, array $nonSuperclassParents)
+	{
+		/**
+		 *
+		 * @todo inherit ID generator ?
+		 */
+		foreach ([
+			'parentClasses' => [
+				$nonSuperclassParents
+			]
+		] as $name => $arguments)
+		{
+			ClassMetadataAdapter::assignMetadataElement($class, $name,
+				...$arguments);
+		}
+
+		/**
+		 *
+		 * @todo EVENT
+		 */
+
+		$this->validateRuntimeMetadata($class, $parent);
+	}
+
+	protected function validateRuntimeMetadata(Classmetadata $class,
+		ClassMetadata $parent = null)
+	{
+		foreach ([
+			'validateIdentifier' => [],
+			'validateAssociations' => [],
+			'validateLifecycleCallbacks' => [
+				$this->getReflectionService()
+			]
+		] as $name => $arguments)
+		{
+			$returned = null;
+			ClassMetadataAdapter::invokeMetadataMethod($returned, $class,
+				$name, ...$arguments);
+		}
 	}
 
 	protected function initialize()
@@ -109,7 +200,11 @@ class GenericClassMetadataFactory extends AbstractClassMetadataFactory implement
 
 	protected function wakeupReflection(ClassMetadata $class,
 		ReflectionService $reflService)
-	{}
+	{
+		$returned = null;
+		ClassMetadataAdapter::invokeMetadataMethod($returned, $class,
+			'wakeupReflection', $reflService);
+	}
 
 	/**
 	 *

@@ -12,8 +12,8 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Persistence\ObjectIdentifier;
+use NoreSources\Persistence\Mapping\GenericClassMetadataFactory;
 use NoreSources\Persistence\TestData\User;
-use NoreSources\Persistence\TestUtility\TestClassMetadataFactory;
 
 class ObjectIdentifierTest extends \PHPUnit\Framework\TestCase
 {
@@ -24,9 +24,10 @@ class ObjectIdentifierTest extends \PHPUnit\Framework\TestCase
 			[
 				__DIR__ . '/../reference/dcm'
 			]);
+
 		$className = User::class;
 
-		$factory = new TestClassMetadataFactory();
+		$factory = new GenericClassMetadataFactory();
 		$factory->setMappingDriver($mappingDriver);
 		$factory->setMetadataClass(ClassMetadata::class);
 		$this->assertInstanceOf(ClassMetadataFactory::class, $factory);
