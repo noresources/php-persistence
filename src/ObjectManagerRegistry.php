@@ -38,7 +38,7 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	 */
 	public function getRepository($className)
 	{
-		$this->getObjectManagerForClass($className)->getRepository(
+		return $this->getObjectManagerForClass($className)->getRepository(
 			$className);
 	}
 
@@ -79,7 +79,8 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	public function remove($object)
 	{
 		$className = \get_class($object);
-		return $this->getObjectManagerForClass($className);
+		return $this->getObjectManagerForClass($className)->remove(
+			$object);
 	}
 
 	/**
@@ -112,8 +113,8 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	 */
 	public function find($className, $id)
 	{
-		$this->getObjectManagerForClass($className)->find($className,
-			$id);
+		return $this->getObjectManagerForClass($className)->find(
+			$className, $id);
 	}
 
 	/**
@@ -124,7 +125,8 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	public function merge($object)
 	{
 		$className = \get_class($object);
-		$this->getObjectManagerForClass($className)->merge($object);
+		return $this->getObjectManagerForClass($className)->merge(
+			$object);
 	}
 
 	/**
@@ -135,7 +137,8 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	public function detach($object)
 	{
 		$className = \get_class($object);
-		$this->getObjectManagerForClass($className)->detach($object);
+		return $this->getObjectManagerForClass($className)->detach(
+			$object);
 	}
 
 	/**
@@ -145,7 +148,7 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	 */
 	public function getClassMetadata($className)
 	{
-		$this->getObjectManagerForClass($className)->getClassMetadata(
+		return $this->getObjectManagerForClass($className)->getClassMetadata(
 			$className);
 	}
 
@@ -157,7 +160,8 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	public function persist($object)
 	{
 		$className = \get_class($object);
-		$this->getObjectManagerForClass($className)->persist($object);
+		return $this->getObjectManagerForClass($className)->persist(
+			$object);
 	}
 
 	/**
