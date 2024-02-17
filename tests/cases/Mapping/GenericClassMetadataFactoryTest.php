@@ -98,23 +98,48 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 					$this->assertEquals(
 						TypeDescription::getName($ormMetadata),
 						TypeDescription::getName($genericMetadata),
-						$classeN . ' metadata');
+						$className . ' metadata');
 				}
 			}
 
 			if (!($ormMetadata instanceof ClassMetadata))
 				continue;
 
+			$this->assertEquals($className, $ormMetadata->getName(),
+				TypeDescription::getName($ormMetadata) .
+				' name must be the qualified class name');
+
+			$this->assertEquals($className, $genericMetadata->getName(),
+				TypeDescription::getName($genericMetadata) .
+				' name must be the qualified class name');
+
 			$this->compareImplementation(
 				[
+					'getName',
 					'name',
 					'getFieldNames',
 					'getIdentifierFieldNames',
 					'getAssociationNames'
 				], $ormMetadata, $genericMetadata,
 				TypeDescription::getLocalName($className, true));
-		}
+		} // for each class // for each class
 
+		$className = Bug::class;
+		$ormMetadata = $ormFactory->getMetadataFor($className);
+		$genericMetadata = $genericFactory->getMetadataFor($className);
+
+		$this->compareImplementation(
+			[
+				'getFieldNames',
+				'getIdentifierFieldNames',
+				'getAssociationNames',
+				'getAssociationTargetClass' => [
+					'reporter'
+				]
+			], $ormMetadata, $genericMetadata,
+			TypeDescription::getLocalName($className));
+
+		////////////////////////////////////////////////////
 		$className = ChildEntity::class;
 		$ormChild = $ormFactory->getMetadataFor($className);
 		$genericChild = $genericFactory->getMetadataFor($className);
@@ -177,7 +202,7 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 		$configuration = ORMSetup::createXMLMetadataConfiguration(
 			[
 				$this->getReferenceFileDirectory() . '/dcm'
-			], $isDevMode);
+			], $isDevMode, $this->getDerivedFileDirectory() . '/proxy');
 
 		$databasePath = $this->getDerivedFilename($method, $suffix,
 			$extension);

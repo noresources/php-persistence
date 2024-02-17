@@ -21,7 +21,6 @@ use NoreSources\Persistence\TestData\BasicEntity;
 use NoreSources\Persistence\TestData\Bug;
 use NoreSources\Persistence\TestData\CustomIdEntity;
 use NoreSources\Persistence\TestData\EmbeddedObjectProperty;
-use NoreSources\Persistence\TestData\ManyToOneEntity;
 use NoreSources\Persistence\TestData\Product;
 use NoreSources\Persistence\TestData\User;
 use NoreSources\Persistence\TestUtility\ResultComparisonTrait;
@@ -374,8 +373,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			'Database path');
 		$em = $this->createEntityManager($configuration, $databasePath,
 			[
-				BasicEntity::class,
-				ManyToOneEntity::class
+				BasicEntity::class
 			]);
 
 		$bob = $em->find(BasicEntity::class, 1);
