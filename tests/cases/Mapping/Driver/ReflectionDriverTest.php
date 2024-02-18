@@ -51,10 +51,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = BasicEntity::class;
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
 		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
-			]);
+			], $flags);
 
 		$ormMeta = new ClassMetadata($className);
 		$basicMeta = new GenericClassMetadata($className);
@@ -100,10 +101,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	public function testUserAndBugs()
 	{
 		$reflectionService = new RuntimeReflectionService();
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
 		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
-			]);
+			], $flags);
 		$xmlDriver = new XmlDriver(
 			[
 				$this->getReferenceFileDirectory() . '/dcm/'
@@ -213,10 +215,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = CustomIdEntity::class;
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
 		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
-			]);
+			], $flags);
 
 		$basicMeta = new GenericClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
@@ -244,10 +247,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$reflectionService = new RuntimeReflectionService();
 		$className = EmbeddedObjectProperty::class;
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
 		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
-			]);
+			], $flags);
 
 		$basicMeta = new GenericClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
@@ -317,10 +321,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$this->assertEquals($table, $metadataFromXml->table,
 			'$table property (XML)');
 
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
 		$reflectionDriver = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
-			]);
+			], $flags);
 		$metadataFromReflection = new ClassMetadata($className);
 		$reflectionDriver->loadMetadataForClass($className,
 			$metadataFromReflection);
@@ -356,7 +361,8 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$paths = [
 			$this->getReferenceFileDirectory() . '/src'
 		];
-		$driverImpl = new ReflectionDriver($paths);
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
+		$driverImpl = new ReflectionDriver($paths, $flags);
 		$isDevMode = true;
 		$configuration = ORMSetup::createConfiguration($isDevMode);
 		$configuration->setMetadataDriverImpl($driverImpl);
@@ -424,10 +430,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$suffix = null;
 		$extension = 'sqlite';
 
+		$flags = ReflectionDriver::ASSOCIATION_TARGET_SHORT_NAME;
 		$driverImpl = new ReflectionDriver(
 			[
 				$this->getReferenceFileDirectory() . '/src'
-			]);
+			], $flags);
 		$isDevMode = true;
 		$configuration = ORMSetup::createConfiguration($isDevMode);
 		$configuration->setMetadataDriverImpl($driverImpl);

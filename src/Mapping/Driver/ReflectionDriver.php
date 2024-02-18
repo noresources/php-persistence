@@ -52,6 +52,15 @@ class ReflectionDriver implements MappingDriver
 	 */
 	const EMBED_PARENT = 0x04;
 
+	/**
+	 * When possible, keep short class names for association target class.
+	 *
+	 * This flag is mostly used for compatibility with other Doctrine drivers.
+	 *
+	 * @var number
+	 */
+	const ASSOCIATION_TARGET_SHORT_NAME = 0x08;
+
 	const TAG_ENTITY = 'entity';
 
 	const TAG_FIELD = 'field';
@@ -152,6 +161,10 @@ class ReflectionDriver implements MappingDriver
 	public function loadMetadataForClass($className, $metadata)
 	{
 		$reflectionClass = new \ReflectionClass($className);
+
+		ClassMetadataAdapter::assignMetadataElement($metadata,
+			'namespace', $reflectionClass->getNamespaceName());
+
 		$filename = $reflectionClass->getFileName();
 		$file = new ReflectionFile($filename);
 		if (!$this->isInPaths($filename))
@@ -678,7 +691,10 @@ class ReflectionDriver implements MappingDriver
 			$targetNamespace = \implode('\\',
 				TypeDescription::getNamespaces($className, true));
 
-			if ($targetNamespace == $namespace)
+			if ($targetNamespace == $namespace &&
+				(($this->driverFlags &
+				self::ASSOCIATION_TARGET_SHORT_NAME) ==
+				self::ASSOCIATION_TARGET_SHORT_NAME))
 				$className = TypeDescription::getLocalName($className,
 					true);
 
