@@ -16,6 +16,7 @@ use NoreSources\Persistence\Mapping\Driver\ReflectionDriver;
 use NoreSources\Persistence\TestData\BasicEntity;
 use NoreSources\Persistence\TestData\Bug;
 use NoreSources\Persistence\TestData\ChildEntity;
+use NoreSources\Persistence\TestData\CollectionEntity;
 use NoreSources\Persistence\TestData\Product;
 use NoreSources\Persistence\TestData\User;
 use NoreSources\Persistence\TestData\Abstracts\ParentEntity;
@@ -48,6 +49,7 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 			Bug::class,
 			Product::class,
 			BasicEntity::class,
+			CollectionEntity::class,
 			ParentEntity::class,
 			ChildEntity::class
 		];
@@ -194,7 +196,6 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 	public function createORMClassMetadataFactory($method,
 		$classes = array(), $initialize = true)
 	{
-		$method = __METHOD__;
 		$isDevMode = true;
 		$suffix = '';
 		$extension = 'sqlite';

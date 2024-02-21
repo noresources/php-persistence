@@ -91,6 +91,11 @@ class ReflectionDriver implements MappingDriver
 	const TAG_EXTRA = 'extra';
 
 	/**
+	 * The PHPDoc tag prefix used in PHP source files
+	 */
+	public $docBlockTagPrefix = 'persistent-';
+
+	/**
 	 *
 	 * @param string[] $paths
 	 *        	Class paths
@@ -112,45 +117,58 @@ class ReflectionDriver implements MappingDriver
 		$this->driverFlags = $flags;
 	}
 
-	/**
-	 * The PHPDoc tag prefix used in PHP source files
-	 */
-	public $docBlockTagPrefix = 'persistent-';
-
-	/**
-	 *
-	 * @return ReflectionClass
-	 */
-	public function getEventConstantsClass()
+	public function getAllClassNames()
 	{
-		if (!isset($this->eventConstantsClass))
-			$this->eventConstantsClass = Event::class;
-		if (\is_string($this->eventConstantsClass))
-			$this->eventConstantsClass = new \ReflectionClass(
-				$this->eventConstantsClass);
-		return $this->eventConstantsClass;
+		if (isset($this->classNames))
+			return $this->classNames;
+
+		$this->classNames = [];
+
+		foreach ($this->paths as $path)
+		{
+			$iterator = new \RecursiveDirectoryIterator($path);
+			$iterator = new \RecursiveIteratorIterator($iterator);
+			/**
+			 *
+			 * @var \SplFileInfo $item
+			 */
+			foreach ($iterator as $item)
+			{
+				if (!$item->isFile())
+					continue;
+
+				if (\strcasecmp($item->getExtension(), 'php') != 0)
+					continue;
+
+				$file = new ReflectionFile($item->getRealPath());
+
+				$all = $file->getClassNames();
+				$entities = [];
+
+				foreach ($all as $name)
+				{
+					$reflectionClass = $file->getClass($name);
+					if (!($reflectionClass instanceof ReflectionClass))
+						continue;
+					$text = $reflectionClass->getDocComment();
+					$block = new ReflectionDocComment($text);
+					if (!$this->hasTag($block, self::TAG_ENTITY))
+						continue;
+					$entities[] = $name;
+				}
+
+				$this->classNames = \array_merge($this->classNames,
+					$entities);
+			}
+		}
+
+		return $this->classNames;
 	}
 
-	public static function parseIdGeneratorType($v,
-		ClassMetadata $metadata)
+	public function isTransient($className)
 	{
-		// Doctrine ORM ClassMetadata like
-		$t = self::getClassMetadataClassConstant($metadata,
-			'GENERATOR_TYPE_', \strtoupper($v));
-		if ($t !== null)
-			return \intval($t);
-
-		return $v;
-	}
-
-	/**
-	 * Set the class containing the list of available events
-	 *
-	 * @param string|ReflectionClass $class
-	 */
-	public function setEventConstantClass($class)
-	{
-		$this->eventConstantsClass = $class;
+		$names = $this->getAllClassNames();
+		return !Container::valueExists($names, $className);
 	}
 
 	/**
@@ -159,6 +177,145 @@ class ReflectionDriver implements MappingDriver
 	 *        	Target metadata
 	 */
 	public function loadMetadataForClass($className, $metadata)
+	{
+		$initialMetadata = clone $metadata;
+		$reflectionClass = new \ReflectionClass($className);
+		$this->cacheMetadataForClass($className, $metadata);
+
+		$this->postprocessAssociationMappings(
+			$this->metadataMappingCache[$className][self::MAPPING_ASSOCIATIONS],
+			[
+				'class' => $reflectionClass,
+				'metadata' => $initialMetadata
+			]);
+
+		$fields = $this->metadataMappingCache[$className][self::MAPPING_FIELDS];
+		$associations = $this->metadataMappingCache[$className][self::MAPPING_ASSOCIATIONS];
+		$this->mapFields($metadata, $fields);
+		$this->mapAssociations($metadata, $associations);
+	}
+
+	protected function postprocessAssociationMappings(&$associations,
+		$context = array())
+	{
+		foreach ($associations as $name => $data)
+		{
+			$associations[$name]['mapping'] = $this->postprocessAssociationMapping(
+				$data['mapping'], $data['mapFunction'], $context);
+		}
+	}
+
+	protected function postprocessAssociationMapping($mapping,
+		$mapFunction, $context = array())
+	{
+		$reflectionClass = $context['class'];
+
+		$fieldName = $mapping['fieldName'];
+		$columnName = Container::keyValue($mapping, 'columnName',
+			$fieldName);
+
+		$targetClassName = $this->getQualifiedClassName(
+			$mapping['targetEntity'],
+			$reflectionClass->getNamespaceName());
+
+		if ($this->isTransient($targetClassName))
+			return $mapping;
+
+		$className = $reflectionClass->getName();
+		$metadata = $context['metadata'];
+		$sourceId = $this->getIdentifierMapping($className,
+			clone $metadata);
+		if (!$sourceId)
+		{
+			/**
+			 *
+			 * @todo error
+			 */
+			return $mapping;
+		}
+
+		$sourceIdName = $sourceId['fieldName'];
+		$sourceIdColumnName = Container::keyValue($sourceId,
+			'columnName', $sourceIdName);
+
+		$targetFieldName = Container::keyValue($mapping,
+			'referencedFieldName');
+		$targetColumnName = '';
+		if (empty($targetFieldName))
+		{
+			$m = clone $metadata;
+			$targetId = $this->getIdentifierMapping($targetClassName, $m);
+			if (!$targetId)
+			{
+				/**
+				 *
+				 * @todo error
+				 */
+				return $mapping;
+			}
+
+			$targetFieldName = $targetId['fieldName'];
+			$targetColumnName = Container::keyValue($targetId,
+				'columnName', $targetFieldName);
+		}
+		if (empty($targetColumnName))
+			$targetColumnName = $targetFieldName;
+
+		if ($mapFunction == 'mapManyToOne')
+		{
+			$mapping['joinColumns'] = [
+				[
+					// 'name' => $targetFieldName,
+					'referencedColumnName' => $targetColumnName
+				]
+			];
+		}
+		elseif ($mapFunction == 'mapManyToMany')
+		{
+			$tableName = TypeDescription::getLocalName($className, true);
+			$tableName .= '_' . $columnName;
+			$tableName .= '_' .
+				TypeDescription::getLocalName($targetClassName, true);
+
+			$mapping['joinTable'] = [
+				'name' => $tableName,
+				'joinColumns' => [
+					[
+						//'name' => $sourceIdName,
+						'referencedColumnName' => $sourceIdColumnName
+					]
+				],
+				'inverseJoinColumns' => [
+					[
+						//'name' => $targetFieldName,
+						'referencedColumnName' => $targetColumnName
+					]
+				]
+			];
+		}
+		return $mapping;
+	}
+
+	protected function getIdentifierMapping($className, $metadata)
+	{
+		$cache = Container::keyValue($this->metadataMappingCache,
+			$className);
+		if (!$cache)
+		{
+			$this->cacheMetadataForClass($className, $metadata);
+			$cache = $this->metadataMappingCache[$className];
+		}
+		$fields = $cache[self::MAPPING_FIELDS];
+
+		foreach ($fields as $mapping)
+		{
+			if (Container::keyValue($mapping, 'id'))
+				return $mapping;
+		}
+		return null;
+	}
+
+	protected function cacheMetadataForClass($className, $metadata)
 	{
 		$reflectionClass = new \ReflectionClass($className);
 
@@ -336,17 +493,126 @@ class ReflectionDriver implements MappingDriver
 
 		$this->processProperties($visited, $metadata, $file,
 			$reflectionClass, $defaultInstance);
-		if (($this->driverFlags & self::EMBED_PARENT) == 0)
-			return;
-		while (($reflectionClass = $reflectionClass->getParentClass()))
-			$this->processProperties($visited, $metadata, $file,
-				$reflectionClass, $defaultInstance);
+		if (($this->driverFlags & self::EMBED_PARENT) ==
+			self::EMBED_PARENT)
+		{
+			while (($reflectionClass = $reflectionClass->getParentClass()))
+				$this->processProperties($visited, $metadata, $file,
+					$reflectionClass, $defaultInstance);
+		}
 	}
 
-	public function processProperties(&$visited, ClassMetadata $metadata,
-		ReflectionFile $file, \ReflectionClass $reflectionClass,
-		$defaultInstance)
+	protected function getQualifiedClassName($className, $namespace)
 	{
+		if (\strpos($className, '\\') === false)
+		{
+			if (!empty($namespace))
+				$className = $namespace . '\\' . $className;
+		}
+		return ltrim($className, '\\');
+	}
+
+	/**
+	 *
+	 * @return ReflectionClass
+	 */
+	protected function getEventConstantsClass()
+	{
+		if (!isset($this->eventConstantsClass))
+			$this->eventConstantsClass = Event::class;
+		if (\is_string($this->eventConstantsClass))
+			$this->eventConstantsClass = new \ReflectionClass(
+				$this->eventConstantsClass);
+		return $this->eventConstantsClass;
+	}
+
+	protected static function parseIdGeneratorType($v,
+		ClassMetadata $metadata)
+	{
+		// Doctrine ORM ClassMetadata like
+		$t = self::getClassMetadataClassConstant($metadata,
+			'GENERATOR_TYPE_', \strtoupper($v));
+		if ($t !== null)
+			return \intval($t);
+
+		return $v;
+	}
+
+	/**
+	 * Set the class containing the list of available events
+	 *
+	 * @param string|ReflectionClass $class
+	 */
+	protected function setEventConstantClass($class)
+	{
+		$this->eventConstantsClass = $class;
+	}
+
+	protected function mapFields(ClassMetadata $metadata, $mappings = [])
+	{
+		$mapFunction = 'mapField';
+		foreach ($mappings as $field => $mapping)
+		{
+			if (isset($mapping['generator']))
+			{
+				$type = $mapping['generator'];
+				unset($mapping['generator']);
+				$type = self::setSpecialGenerator($type, $metadata,
+					$mapping);
+				self::invokeClassMetadataMethod($metadata,
+					"setIdGeneratorType", $type);
+			}
+			if (isset($mapping['version']))
+			{
+				self::invokeClassMetadataMethod($metadata,
+					"setVersionMapping", $mapping);
+				unset($mapping['version']);
+			}
+
+			if (isset($mapping['version']))
+			{
+				self::invokeClassMetadataMethod($metadata,
+					"setVersionMapping", $mapping);
+				unset($mapping['version']);
+			}
+			self::invokeClassMetadataMethod($metadata, $mapFunction,
+				$mapping);
+		}
+	}
+
+	protected function mapAssociations(ClassMetadata $metadata,
+		$mappings)
+	{
+		foreach ($mappings as $field => $data)
+		{
+
+			$mapFunction = $data['mapFunction'];
+			$mapping = $data['mapping'];
+			self::invokeClassMetadataMethod($metadata, $mapFunction,
+				$mapping);
+		}
+	}
+
+	protected function processProperties(&$visited,
+		ClassMetadata $metadata, ReflectionFile $file,
+		\ReflectionClass $reflectionClass, $defaultInstance)
+	{
+		$className = $reflectionClass->getName();
+
+		if (!Container::keyExists($this->metadataMappingCache,
+			$className))
+			$this->metadataMappingCache[$className] = [
+				self::MAPPING_FIELDS => [],
+				self::MAPPING_ASSOCIATIONS => []
+			];
+
+		$visited = \array_unique(
+			\array_merge($visited,
+				Container::keys(
+					$this->metadataMappingCache[$className][self::MAPPING_FIELDS]),
+				Container::keys(
+					$this->metadataMappingCache[$className][self::MAPPING_ASSOCIATIONS])));
+
 		$propertyTagParameters = self::getPropertyTagParametersDescriptor();
 		$associations = [
 			self::TAG_MANY_TO_MANY => [
@@ -400,8 +666,7 @@ class ReflectionDriver implements MappingDriver
 					null)
 					$this->parseParameters($mapping, $field, $metadata,
 						\array_merge($propertyTagParameters,
-							self::getFieldTagParametersDescriptor(
-								$metadata)));
+							self::getFieldTagParametersDescriptor()));
 			} // field
 
 			if ($this->hasTag($block, self::TAG_ID))
@@ -411,16 +676,6 @@ class ReflectionDriver implements MappingDriver
 					$this->parseParameters($mapping, $id, $metadata,
 						self::getIdTagParametersDescriptor($metadata));
 				$mapping['id'] = true;
-
-				if (isset($mapping['generator']))
-				{
-					$type = $mapping['generator'];
-					unset($mapping['generator']);
-					$type = self::setSpecialGenerator($type, $metadata,
-						$mapping);
-					self::invokeClassMetadataMethod($metadata,
-						"setIdGeneratorType", $type);
-				}
 			} // id
 
 			foreach ($associations as $tagname => $f)
@@ -451,16 +706,12 @@ class ReflectionDriver implements MappingDriver
 						throw MappingException::missingTargetEntity(
 							$mapping['fieldName'], $tagname);
 				}
-
-				if (!isset($mapping['joinColumns']))
-					$mapping['joinColumns'] = [];
 			} // each associations
 
 			if ($mapFunction === null && $property->isPublic() &&
 				($this->driverFlags & self::PUBLIC_PROPERTY_AUTO_MAPPING))
 			{
 				$mapFunction = 'mapField';
-				$mapping['fieldName'] = $property->getName();
 			}
 
 			if (!$mapFunction)
@@ -495,71 +746,16 @@ class ReflectionDriver implements MappingDriver
 				$this->setAutomaticMapping($mapping, $file, $property,
 					$block, $defaultInstance);
 
-			if (isset($mapping['version']))
-			{
-				self::invokeClassMetadataMethod($metadata,
-					"setVersionMapping", $mapping);
-				unset($mapping['version']);
-			}
+			if ($mapFunction == 'mapField')
+				$this->metadataMappingCache[$className][self::MAPPING_FIELDS][$name] = $mapping;
+			else
+				$this->metadataMappingCache[$className][self::MAPPING_ASSOCIATIONS][$name] = [
+					'mapFunction' => $mapFunction,
+					'mapping' => $mapping
+				];
 
-			self::invokeClassMetadataMethod($metadata, $mapFunction,
-				$mapping);
 			$visited[] = $property->getName();
 		} // Properties
-	}
-
-	public function getAllClassNames()
-	{
-		if (isset($this->classNames))
-			return $this->classNames;
-
-		$this->classNames = [];
-
-		foreach ($this->paths as $path)
-		{
-			$iterator = new \RecursiveDirectoryIterator($path);
-			$iterator = new \RecursiveIteratorIterator($iterator);
-			/**
-			 *
-			 * @var \SplFileInfo $item
-			 */
-			foreach ($iterator as $item)
-			{
-				if (!$item->isFile())
-					continue;
-
-				if (\strcasecmp($item->getExtension(), 'php') != 0)
-					continue;
-
-				$file = new ReflectionFile($item->getRealPath());
-
-				$all = $file->getClassNames();
-				$entities = [];
-
-				foreach ($all as $name)
-				{
-					$reflectionClass = $file->getClass($name);
-					if (!($reflectionClass instanceof ReflectionClass))
-						continue;
-					$text = $reflectionClass->getDocComment();
-					$block = new ReflectionDocComment($text);
-					if (!$this->hasTag($block, self::TAG_ENTITY))
-						continue;
-					$entities[] = $name;
-				}
-
-				$this->classNames = \array_merge($this->classNames,
-					$entities);
-			}
-		}
-
-		return $this->classNames;
-	}
-
-	public function isTransient($className)
-	{
-		$names = $this->getAllClassNames();
-		return !Container::valueExists($names, $className);
 	}
 
 	public static function stringToBoolean($v)
@@ -1117,11 +1313,18 @@ class ReflectionDriver implements MappingDriver
 		if (!isset(self::$associationTagParametersDescriptor))
 		{
 			self::$associationTagParametersDescriptor = [
-				'target-entity',
 				'field' => [
 					'key' => 'fieldName'
 				],
-				'join-columns',
+				'target-class' => [
+					'key' => 'targetEntity'
+				],
+				'target-field' => [
+					'key' => 'referencedFieldName'
+				],
+				'target-column' => [
+					'key' => 'referencedColumnName'
+				],
 				'fetch' => [
 					'type' => 'integer',
 					'pre-set' => Closure::fromCallable(
@@ -1207,6 +1410,16 @@ class ReflectionDriver implements MappingDriver
 	 * @var integer
 	 */
 	private $driverFlags = 0;
+
+	/**
+	 *
+	 * @var array
+	 */
+	private $metadataMappingCache = [];
+
+	const MAPPING_FIELDS = 'fields';
+
+	const MAPPING_ASSOCIATIONS = 'associations';
 
 	/**
 	 * Parameters descritpr for the entity tag.

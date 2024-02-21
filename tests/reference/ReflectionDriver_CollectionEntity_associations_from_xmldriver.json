@@ -1,0 +1,76 @@
+{
+    "mainEntity": {
+        "fieldName": "mainEntity",
+        "targetEntity": "BasicEntity",
+        "joinColumns": [
+            {
+                "name": "basicId",
+                "referencedColumnName": "basicId"
+            }
+        ],
+        "type": 2,
+        "mappedBy": null,
+        "inversedBy": null,
+        "isOwningSide": true,
+        "sourceEntity": "NoreSources\\Persistence\\TestData\\CollectionEntity",
+        "fetch": 2,
+        "cascade": [],
+        "isCascadeRemove": false,
+        "isCascadePersist": false,
+        "isCascadeRefresh": false,
+        "isCascadeMerge": false,
+        "isCascadeDetach": false,
+        "sourceToTargetKeyColumns": {
+            "basicId": "basicId"
+        },
+        "joinColumnFieldNames": {
+            "basicId": "basicId"
+        },
+        "targetToSourceKeyColumns": {
+            "basicId": "basicId"
+        },
+        "orphanRemoval": false
+    },
+    "otherEntities": {
+        "fieldName": "otherEntities",
+        "targetEntity": "BasicEntity",
+        "joinTable": {
+            "name": "collection_of_basics",
+            "joinColumns": [
+                {
+                    "name": "key",
+                    "referencedColumnName": "key"
+                }
+            ],
+            "inverseJoinColumns": [
+                {
+                    "name": "basicId",
+                    "referencedColumnName": "basicId"
+                }
+            ]
+        },
+        "type": 8,
+        "mappedBy": null,
+        "inversedBy": null,
+        "isOwningSide": true,
+        "sourceEntity": "NoreSources\\Persistence\\TestData\\CollectionEntity",
+        "fetch": 2,
+        "cascade": [],
+        "isCascadeRemove": false,
+        "isCascadePersist": false,
+        "isCascadeRefresh": false,
+        "isCascadeMerge": false,
+        "isCascadeDetach": false,
+        "joinTableColumns": [
+            "key",
+            "basicId"
+        ],
+        "relationToSourceKeyColumns": {
+            "key": "key"
+        },
+        "relationToTargetKeyColumns": {
+            "basicId": "basicId"
+        },
+        "orphanRemoval": false
+    }
+}

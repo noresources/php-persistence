@@ -21,11 +21,11 @@ class BasicEntity
 	/**
 	 * The entity unique ID
 	 *
-	 * @persistent-id generator=auto
+	 * @persistent-id generator=auto; column=bid
 	 *
 	 * @var integer
 	 */
-	public $id;
+	public $basicId;
 
 	/**
 	 * The entity name

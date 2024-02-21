@@ -1,0 +1,28 @@
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                            http://doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+	<entity name="NoreSources\Persistence\TestData\CollectionEntity" table="Test_CollectionEntity" schema="Tests">
+		<id name="key"
+			column="collection_id" 
+			type="string" />
+		<many-to-one 
+			field="mainEntity" 
+			target-entity="BasicEntity">
+				<join-column name="basicId" referenced-column-name="basicId" />
+		</many-to-one>
+		
+		<many-to-many field="otherEntities" 
+				target-entity="BasicEntity">
+				<join-table name="collection_of_basics">
+					<join-columns>
+							
+							<join-column  name="key" referenced-column-name="key" />
+					</join-columns>
+					<inverse-join-columns>
+						<join-column name="basicId" referenced-column-name="basicId" />
+					</inverse-join-columns>
+				</join-table>
+		</many-to-many>
+	</entity>
+</doctrine-mapping>

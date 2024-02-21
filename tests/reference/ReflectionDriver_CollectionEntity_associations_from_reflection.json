@@ -1,0 +1,76 @@
+{
+    "mainEntity": {
+        "fieldName": "mainEntity",
+        "targetEntity": "NoreSources\\Persistence\\TestData\\BasicEntity",
+        "joinColumns": [
+            {
+                "referencedColumnName": "bid",
+                "name": "mainEntity_id"
+            }
+        ],
+        "type": 2,
+        "mappedBy": null,
+        "inversedBy": null,
+        "isOwningSide": true,
+        "sourceEntity": "NoreSources\\Persistence\\TestData\\CollectionEntity",
+        "fetch": 2,
+        "cascade": [],
+        "isCascadeRemove": false,
+        "isCascadePersist": false,
+        "isCascadeRefresh": false,
+        "isCascadeMerge": false,
+        "isCascadeDetach": false,
+        "sourceToTargetKeyColumns": {
+            "mainEntity_id": "bid"
+        },
+        "joinColumnFieldNames": {
+            "mainEntity_id": "mainEntity_id"
+        },
+        "targetToSourceKeyColumns": {
+            "bid": "mainEntity_id"
+        },
+        "orphanRemoval": false
+    },
+    "otherEntities": {
+        "fieldName": "otherEntities",
+        "targetEntity": "NoreSources\\Persistence\\TestData\\BasicEntity",
+        "joinTable": {
+            "name": "CollectionEntity_otherEntities_BasicEntity",
+            "joinColumns": [
+                {
+                    "referencedColumnName": "collection_id",
+                    "name": "collectionentity_collection_id"
+                }
+            ],
+            "inverseJoinColumns": [
+                {
+                    "referencedColumnName": "bid",
+                    "name": "basicentity_bid"
+                }
+            ]
+        },
+        "type": 8,
+        "mappedBy": null,
+        "inversedBy": null,
+        "isOwningSide": true,
+        "sourceEntity": "NoreSources\\Persistence\\TestData\\CollectionEntity",
+        "fetch": 2,
+        "cascade": [],
+        "isCascadeRemove": false,
+        "isCascadePersist": false,
+        "isCascadeRefresh": false,
+        "isCascadeMerge": false,
+        "isCascadeDetach": false,
+        "joinTableColumns": [
+            "collectionentity_collection_id",
+            "basicentity_bid"
+        ],
+        "relationToSourceKeyColumns": {
+            "collectionentity_collection_id": "collection_id"
+        },
+        "relationToTargetKeyColumns": {
+            "basicentity_bid": "bid"
+        },
+        "orphanRemoval": false
+    }
+}

@@ -19,6 +19,7 @@ use NoreSources\Persistence\Mapping\GenericClassMetadata;
 use NoreSources\Persistence\Mapping\Driver\ReflectionDriver;
 use NoreSources\Persistence\TestData\BasicEntity;
 use NoreSources\Persistence\TestData\Bug;
+use NoreSources\Persistence\TestData\CollectionEntity;
 use NoreSources\Persistence\TestData\CustomIdEntity;
 use NoreSources\Persistence\TestData\EmbeddedObjectProperty;
 use NoreSources\Persistence\TestData\Product;
@@ -95,6 +96,58 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$this->assertEquals($extra['userDefined'], 'option',
 			'User-defined extra property');
 		//////////////////////////////////////////////////
+	}
+
+	public function testCollectionEntity()
+	{
+		$method = __METHOD__;
+		$className = CollectionEntity::class;
+
+		$xmlDriver = new XmlDriver(
+			[
+				$this->getReferenceFileDirectory() . '/dcm'
+			]);
+
+		$xmlMetadata = new ClassMetadata($className);
+		$xmlDriver->loadMetadataForClass($className, $xmlMetadata);
+
+		$json = \json_encode($xmlMetadata->getAssociationMappings(),
+			JSON_PRETTY_PRINT);
+		$this->assertDerivedFile($json, $method,
+			'associations_from_xmldriver', 'json');
+
+		$reflectionDriver = new ReflectionDriver(
+			[
+				$this->getReferenceFileDirectory() . '/src'
+			]);
+		$metadata = new ClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $metadata);
+
+		$this->assertTrue($metadata->hasAssociation('otherEntities'),
+			$className . ' has association.');
+
+		$json = \json_encode($metadata->getAssociationMappings(),
+			JSON_PRETTY_PRINT);
+		$this->assertDerivedFile($json, $method,
+			'associations_from_reflection', 'json');
+
+		$isDevMode = true;
+		$configuration = ORMSetup::createConfiguration($isDevMode);
+
+		$configuration->setMetadataDriverImpl($reflectionDriver);
+		//$configuration->setMetadataDriverImpl($xmlDriver);
+
+		$suffix = '';
+		$extension = 'sqlite';
+		$databasePath = $this->getDerivedFilename($method, $suffix,
+			$extension);
+		$this->assertCreateFileDirectoryPath($databasePath,
+			'Database path');
+		$em = $this->createEntityManager($configuration, $databasePath,
+			[
+				BasicEntity::class,
+				CollectionEntity::class
+			]);
 	}
 
 	public function testUserAndBugs()
@@ -387,14 +440,14 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 
 		$bob = new BasicEntity();
 
-		$bob->id = 1;
+		$bob->basicId = 1;
 		$bob->name = 'Bob';
 
 		$this->assertNull($bob->nickname, 'Default nickname is null');
 
 		$em->persist($bob);
 
-		$this->assertEquals(1, $bob->id, 'Bob ID');
+		$this->assertEquals(1, $bob->basicId, 'Bob ID');
 
 		if (false) // TODO event listeners
 		{
