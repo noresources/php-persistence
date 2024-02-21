@@ -84,7 +84,7 @@ trait FieldMappingClassMetadataTrait
 	public function isIdentifier($fieldName)
 	{
 		return Container::keyValue($this->fieldMappings, $fieldName,
-			false) ? true : fase;
+			false) ? true : false;
 	}
 
 	/**
