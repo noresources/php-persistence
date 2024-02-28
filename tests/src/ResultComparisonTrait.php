@@ -31,12 +31,36 @@ trait ResultComparisonTrait
 	{
 		$vs = TypeDescription::getLocalName($a) . ' vs ' .
 			TypeDescription::getLocalName($b);
+
+		$prefix = $testName . ' | ' . $vs . ' | ';
+
+		if (!\is_object($a))
+		{
+			$ta = TypeDescription::getName($a);
+			$b = TypeDescription::getName($b);
+			$this->assertEquals($ta, $tb,
+				$prefix . 'Both have same type');
+		}
+		else
+		{
+			$this->assertTrue(\is_object($b),
+				$prefix . 'Both are objects');
+		}
+
 		foreach ($tests as $method => $arguments)
 		{
-			if (\is_integer($method) && \is_string($arguments))
+			if (\is_integer($method))
+			{
+				if (\is_array($arguments))
+					$method = \array_shift($arguments);
+				elseif (\is_string($arguments))
 			{
 				$method = $arguments;
 				$arguments = [];
+			}
+				else
+					throw new \InvalidArgumentException(
+						'string -> array, or string or int => array expected.');
 			}
 
 			$callableA = [
