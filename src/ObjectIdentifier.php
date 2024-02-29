@@ -19,6 +19,33 @@ class ObjectIdentifier
 {
 
 	/**
+	 * Indicates if two object identity are equal.
+	 *
+	 * @param array $a
+	 *        	First identifier
+	 * @param array $b
+	 *        	Second identifier
+	 * @return boolean
+	 */
+	public static function equals($a, $b)
+	{
+		$ca = \count($a);
+		$cb = \count($b);
+		if ($ca != $cb)
+			return false;
+		foreach ($a as $k => $va)
+		{
+			if (!\array_key_exists($k, $b))
+				return false;
+			$vb = $b[$k];
+			if ($va != $vb)
+				return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Remove all keys of $id that are not in the list of identifier field names
 	 *
 	 * @param array $id
