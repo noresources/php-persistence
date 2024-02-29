@@ -55,15 +55,24 @@ trait ReflectionServiceIdentifierValueClassMetadataTrait
 			ReflectionServiceInterface::EXPOSE_INHERITED_PROPERTY |
 			ReflectionServiceInterface::WRITABLE;
 
-		foreach ($names as $name)
+		$c = \count($names);
+		for ($i = 0; $i < $c; $i++)
 		{
+			$name = $names[$i];
+			$value = null;
+			if (Container::isArray($generatedValues))
+			{
+				$value = Container::keyValue($generatedValues, $name,
+					Container::keyValue($generatedValues, $i,
+						Container::firstValue($generatedValues)));
+			}
+			else
+				$value = $generatedValues;
+
 			$property = $this->getReflectionService()->getReflectionProperty(
 				$class, $name, $flags);
-			if (Container::isArray($generatedValues))
-				$property->setValue($object,
-					Container::keyValue($generatedValues, $name));
-			else
-				$property->setValue($object, $generatedValues);
+
+			$property->setValue($object, $value);
 		}
 	}
 }
