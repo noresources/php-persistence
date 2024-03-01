@@ -90,9 +90,26 @@ class Configuration implements MappingDriverProviderInterface,
 		return $this->metadataFactory;
 	}
 
+	/**
+	 * Set class metadata factory
+	 *
+	 * @param ClassMetadataFactory $factory
+	 *        	User-defined class metadata factory
+	 */
 	public function setMetadataFactory(ClassMetadataFactory $factory)
 	{
 		$this->metadataFactory = $factory;
+	}
+
+	/**
+	 *
+	 * @return \NoreSources\Persistence\ObjectRuntimeIdGeneratorInterface
+	 */
+	public function getObjectRuntimeIdGenerator()
+	{
+		if (!isset($this->objectRuntimeIdGenerator))
+			$this->objectRuntimeIdGenerator = new DefaultObjectRuntimeIdGenerator();
+		return $this->objectRuntimeIdGenerator;
 	}
 
 	/**
@@ -124,4 +141,10 @@ class Configuration implements MappingDriverProviderInterface,
 	 * @var ClassMetadataFactory
 	 */
 	private $metadataFactory;
+
+	/**
+	 *
+	 * @var ObjectRuntimeIdGeneratorInterface
+	 */
+	private $objectRuntimeIdGenerator;
 }
