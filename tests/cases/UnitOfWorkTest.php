@@ -54,7 +54,7 @@ class UnitOfWorkTest extends \PHPUnit\Framework\TestCase
 		$this->assertTrue($unitOfWork->contains($a));
 		$this->assertTrue($unitOfWork->contains($b));
 		$this->assertTrue($unitOfWork->contains($c));
-		$unitOfWork->clear();
+		$unitOfWork->clear(true);
 		$this->assertFalse($unitOfWork->contains($a));
 		$this->assertFalse($unitOfWork->contains($b));
 		$this->assertFalse($unitOfWork->contains($c));
@@ -64,7 +64,7 @@ class UnitOfWorkTest extends \PHPUnit\Framework\TestCase
 	{
 		$a = new ArrayObject();
 		$unitOfWOrk = new UnitOfWork();
-		$unitOfWOrk->insert($a);
+		$unitOfWOrk->update($a);
 		$this->expectException(\InvalidArgumentException::class);
 		$unitOfWOrk->remove($a);
 	}

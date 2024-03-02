@@ -16,6 +16,13 @@ use NoreSources\Type\TypeDescription;
 class NotManagedException extends \Exception
 {
 
+	/**
+	 *
+	 * @param object|string $classOrObject
+	 *        	Object or class name that is not managed
+	 * @param object $manager
+	 *        	Object manager
+	 */
 	public function __construct($classOrObject, $manager = null)
 	{
 		if (!\is_string($classOrObject))

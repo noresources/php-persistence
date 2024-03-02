@@ -11,12 +11,29 @@ namespace NoreSources\Persistence;
 /**
  * ID generator using PHP uniqid function
  */
-class UnitOfWork
+class UnitOfWork implements ObjectContainerInterface
 {
 
+	/**
+	 * Managed object pending operation
+	 *
+	 * @var integer
+	 */
 	const KEY_OPERATION = 0;
 
+	/**
+	 * Managed object data
+	 *
+	 * @var integer
+	 */
 	const KEY_OBJECT = 1;
+
+	/**
+	 * Object initial identity
+	 *
+	 * @var integer
+	 */
+	const KEY_IDENTITY = 2;
 
 	/**
 	 * Store a new object
@@ -37,7 +54,7 @@ class UnitOfWork
 	public function __construct()
 	{
 		$this->operationOrder = [];
-		$this->operations = [];
+		$this->managedObjects = [];
 		$this->oidFunction = '\spl_object_hash';
 		if (\function_exists('\spl_object_id'))
 			$this->oidFunction = '\spl_object_id';
@@ -63,27 +80,48 @@ class UnitOfWork
 		$this->appendOperation($oid, $object, self::OPERATION_REMOVE);
 	}
 
+	public function attach(object $object)
+	{
+		$oid = $this->getObjectOID($object);
+		if (isset($this->managedObjects[$oid]))
+			return;
+		$this->managedObjects[$oid] = [
+			self::KEY_OBJECT => $object
+		];
+	}
+
 	public function detach($object)
 	{
 		$oid = $this->getObjectOID($object);
-		if (!isset($this->operations[$oid]))
-			throw new \InvalidArgumentException(
-				'Object is not manageed in this unit of work');
+		if (!isset($this->managedObjects[$oid]))
+			$this->notManagedException($object);
 		$index = \array_search($oid, $this->operationOrder);
-		unset($this->operations[$oid]);
+		unset($this->managedObjects[$oid]);
 		\array_splice($this->operationOrder, $index, 1);
 	}
 
-	public function clear()
+	public function clear($full)
 	{
-		$this->operations = [];
+		if ($full)
+			$this->managedObjects = [];
+		else
+		{
+			foreach ($this->managedObjects as $oid => $infos)
+				unset($this->managedObjects[$oid][self::KEY_OPERATION]);
+		}
+
 		$this->operationOrder = [];
 	}
 
 	public function contains($object)
 	{
 		$oid = $this->getObjectOID($object);
-		return isset($this->operations[$oid]);
+		if (!isset($this->managedObjects[$oid]))
+			return false;
+		$o = $this->managedObjects[$oid];
+		if (!isset($o[self::KEY_OPERATION]))
+			return true;
+		return ($o[self::KEY_OPERATION] != self::OPERATION_REMOVE);
 	}
 
 	/**
@@ -94,26 +132,58 @@ class UnitOfWork
 	{
 		$tasks = [];
 		foreach ($this->operationOrder as $oid)
-			$tasks[] = $this->operations[$oid];
+			$tasks[] = $this->managedObjects[$oid];
 		return $tasks;
+	}
+
+	public function setObjectIdentity($object, $id)
+	{
+		if (!\is_array($id) && \count($id))
+			throw new \InvalidArgumentException(
+				'Object identity must be an array with at least 1 element. Got ' .
+				gettype($object));
+		$oid = $this->getObjectOID($object);
+		if (!isset($this->managedObjects[$oid]))
+			$this->notManagedException($object);
+		$this->managedObjects[$oid][self::KEY_IDENTITY] = $id;
+	}
+
+	protected function notManagedException($classOrObject)
+	{
+		throw new NotManagedException($classOrObject, $this);
 	}
 
 	private function appendOperation($oid, $object, $operation)
 	{
-		if (isset($this->operations[$oid]))
+		if (!isset($this->managedObjects[$oid]))
+			$this->managedObjects[$oid] = [
+				self::KEY_OBJECT => $object
+			];
+
+		if (isset($this->managedObjects[$oid][self::KEY_OPERATION]))
 		{
-			if ($this->operations[$oid][self::KEY_OPERATION] !=
-				$operation)
+			$previous = $this->managedObjects[$oid][self::KEY_OPERATION];
+			if ($previous == $operation)
+				return;
+
+			$conflicts = true;
+
+			if ($previous == self::OPERATION_INSERT)
+			{
+				if ($operation == self::OPERATION_UPDATE)
+					return;
+				if ($operation == self::OPERATION_REMOVE)
+					$conflicts = false;
+			}
+
+			if ($conflicts)
 				throw new \InvalidArgumentException(
 					'A different operation already exists for this object');
-			return;
 		}
 
 		$this->operationOrder[] = $oid;
-		$this->operations[$oid] = [
-			self::KEY_OBJECT => $object,
-			self::KEY_OPERATION => $operation
-		];
+
+		$this->managedObjects[$oid][self::KEY_OPERATION] = $operation;
 	}
 
 	private function getObjectOID($object)
@@ -125,7 +195,7 @@ class UnitOfWork
 	 *
 	 * @var array
 	 */
-	private $operations;
+	private $managedObjects;
 
 	/**
 	 *

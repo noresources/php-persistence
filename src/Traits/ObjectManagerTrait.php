@@ -14,6 +14,8 @@ use Doctrine\Persistence\Mapping\ClassMetadata;
 use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Container\Container;
 use NoreSources\Persistence\NotManagedException;
+use NoreSources\Persistence\ObjectContainerInterface;
+use NoreSources\Persistence\ObjectIdentifier;
 use NoreSources\Persistence\ObjectPersisterInterface;
 use NoreSources\Persistence\PropertyMappingInterface;
 use NoreSources\Persistence\PropertyMappingProviderInterface;
@@ -62,23 +64,17 @@ trait ObjectManagerTrait
 		$metadata = null;
 		$className = null;
 
-		if (!$this->unitOfWork->contains($object))
+		$insert = !$this->contains($object);
+		$idGenerator = null;
+
+		if ($insert)
 		{
 			$className = \get_class($object);
 			$metadata = $this->getClassMetadata($className);
-			$idFields = $metadata->getIdentifierFieldNames();
-			$idFieldCount = \count($idFields);
-			$insert = ($idFieldCount == 0);
-			if ($idFieldCount)
-			{
-				$idValues = $metadata->getIdentifierValues($object);
-				$nulls = \array_filter($idValues, '\is_null');
-				$idValueCount = \count($idValues) - \count($nulls);
-				if ($idFieldCount > $idValueCount)
-					$insert = $requireIdGeneration = true;
-				else
-					$insert = $this->find($className, $idValues) == null;
-			}
+
+			$idGenerator = ClassMetadataAdapter::getIdGenerator(
+				$metadata);
+			$requireIdGeneration = ($idGenerator !== null);
 		}
 
 		if (!$insert)
@@ -100,26 +96,14 @@ trait ObjectManagerTrait
 
 		if ($requireIdGeneration)
 		{
-			$idFields = $metadata->getIdentifierFieldNames();
-			$idValues = $metadata->getIdentifierValues($object);
-			$nulls = \array_filter($idValues, '\is_null');
-
-			$requireIdGeneration = \count($idFields) !=
-				(\count($idValues) - \count($nulls));
-		}
-
-		if ($requireIdGeneration)
-		{
-			$idGenerator = ClassMetadataAdapter::getIdGenerator(
-				$metadata);
-			if (!$idGenerator)
-				throw new \Exception(
-					'No ID generator for ' . $metadata->getName());
 			$id = $idGenerator->generate($this, $object);
 			$this->setObjectIdentifierValues($object, $id, $metadata);
 		}
 
 		$this->unitOfWork->insert($object);
+		$id = $metadata->getIdentifierValues($object);
+		if (\count($id))
+			$this->unitOfWork->setObjectIdentity($object, $id);
 	}
 
 	/**
@@ -129,9 +113,18 @@ trait ObjectManagerTrait
 	 */
 	public function remove($object)
 	{
-		if (!isset($this->unitOfWork))
+		if (!$this->contains($object))
+			$this->notManagedException($object);
+		if (!$this->unitOfWork)
 			$this->unitOfWork = $this->createUnitOfWork();
 		$this->unitOfWork->remove($object);
+		$className = \get_class($object);
+		if ($this->hasRepository($className))
+		{
+			$repository = $this->getRepository($className);
+			if ($repository instanceof ObjectContainerInterface)
+				$repository->detach($object);
+		}
 	}
 
 	/**
@@ -154,7 +147,7 @@ trait ObjectManagerTrait
 	public function clear($objectName = null)
 	{
 		if (isset($this->unitOfWork))
-			$this->unitOfWork->clear();
+			$this->unitOfWork->clear(true);
 	}
 
 	/**
@@ -164,8 +157,30 @@ trait ObjectManagerTrait
 	 */
 	public function detach($object)
 	{
-		if (isset($this->unitOfWork))
+		$found = false;
+
+		if (($this->unitOfWork instanceof ObjectContainerInterface) &&
+			$this->unitOfWork->contains($object))
+		{
 			$this->unitOfWork->detach($object);
+			$found = true;
+		}
+
+		$className = \get_class($object);
+		if ($this->hasRepository($className))
+		{
+			$repository = $this->getRepository($className);
+
+			if ($repository instanceof ObjectContainerInterface &&
+				$repository->contains($object))
+			{
+				$repository->detach($object);
+				$found = true;
+			}
+		}
+
+		if (!$found)
+			$this->notManagedException($object);
 	}
 
 	/**
@@ -176,18 +191,15 @@ trait ObjectManagerTrait
 	 */
 	public function refresh($object)
 	{
-		if (!isset($this->unitOfWork))
-			$this->unitOfWork = $this->createUnitOfWork();
+		if (!$this->contains($object))
+			$this->notManagedException($object);
 
-		if ($this->unitOfWork->contains($object))
-			$this->unitOfWork->detach($object);
-		$className = \gec_class($object);
+		$this->detach($object);
+
+		$className = \get_class($object);
 		$class = $this->getClassMetadata($className);
 		$id = $class->getIdentifierValues($object);
 		$existing = $this->find($className, $id);
-
-		if (!$existing)
-			return;
 
 		$repository = $this->getRepository($className);
 		$populator = null;
@@ -201,6 +213,8 @@ trait ObjectManagerTrait
 				'No PropertyMappingInterface found for ' . $className);
 
 		$populator->assignObjectProperties($object, $existing);
+		if ($repository instanceof ObjectContainerInterface)
+			$repository->attach($object);
 	}
 
 	/**
@@ -226,11 +240,7 @@ trait ObjectManagerTrait
 			$object = $task[UnitOfWork::KEY_OBJECT];
 			$operation = $task[UnitOfWOrk::KEY_OPERATION];
 			$className = \get_class($object);
-			$factory = $this->getMetadataFactory();
-			if (!isset($factory))
-				throw new \RuntimeException(
-					'Metadata factory not configured');
-			$metadata = $factory->getMetadataFor($className);
+			$metadata = $this->getClassMetadata($className);
 			$persister = $this->getPersister($className);
 
 			if (!$persister)
@@ -238,11 +248,34 @@ trait ObjectManagerTrait
 					'No persister defined for ' . $className);
 
 			$event = new LifecycleEventArgs($object, $this);
+
+			$repositoryObject = $object;
+			$initialId = NULL;
+			if (($initialId = Container::keyValue($task,
+				UnitOfWork::KEY_IDENTITY, NULL)) !== NULL)
+			{
+				$id = $metadata->getIdentifierValues($object);
+				if (!ObjectIdentifier::equals($initialId, $id))
+				{
+					$repositoryObject = clone $object;
+					$this->setObjectIdentifierValues($repositoryObject,
+						$initialId, $metadata);
+					$id = $metadata->getIdentifierValues($object);
+				}
+			}
+
 			switch ($operation)
 			{
 				case UnitOfWork::OPERATION_INSERT:
 
-					$persister->persist($object);
+					$persister->persist($repositoryObject);
+					if ($initialId === NULL)
+					{
+						$id = $metadata->getIdentifierValues(
+							$repositoryObject);
+						$this->unitOfWork->setObjectIdentity($object,
+							$id);
+					}
 
 					if ($listenerInvoker)
 						$listenerInvoker->invoke($metadata,
@@ -254,7 +287,14 @@ trait ObjectManagerTrait
 						$listenerInvoker->invoke($metadata,
 							Event::preUpdate, $object, $event);
 
-					$persister->persist($object);
+					$persister->persist($repositoryObject);
+					if ($initialId === NULL)
+					{
+						$id = $metadata->getIdentifierValues(
+							$repositoryObject);
+						$this->unitOfWork->setObjectIdentity($object,
+							$id);
+					}
 
 					if ($listenerInvoker)
 						$listenerInvoker->invoke($metadata,
@@ -266,7 +306,7 @@ trait ObjectManagerTrait
 						$listenerInvoker->invoke($metadata,
 							Event::preRemove, $object, $event);
 
-					$persister->remove($object);
+					$persister->remove($repositoryObject);
 
 					if ($listenerInvoker)
 						$listenerInvoker->invoke($metadata,
@@ -274,7 +314,7 @@ trait ObjectManagerTrait
 				break;
 			}
 		}
-		$this->unitOfWork->clear();
+		$this->unitOfWork->clear(false);
 	}
 
 	/**
@@ -376,9 +416,23 @@ trait ObjectManagerTrait
 	 */
 	public function contains($object)
 	{
-		if (!$this->unitOfWork)
-			return false;
-		return $this->unitOfWork->contains($object);
+		if ($this->unitOfWork)
+		{
+			if ($this->unitOfWork instanceof ObjectContainerInterface &&
+				$this->unitOfWork->contains($object))
+				return true;
+		}
+
+		$className = \get_class($object);
+		if ($this->hasRepository($className))
+		{
+			$repository = $this->getRepository($className);
+			if ($repository instanceof ObjectContainerInterface &&
+				$repository->contains($object))
+				return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -530,12 +584,7 @@ trait ObjectManagerTrait
 	protected function setObjectIdentifierValues($object,
 		$generatedValues, ClassMetadata $metadata = null)
 	{
-		$factory = $this->getMetadataFactory();
-		if (!isset($factory))
-			throw new \RuntimeException(
-				'Metadata factory not configured');
-
-		$metadata = $factory->getMetadataFor(\get_class($object));
+		$metadata = $this->getClassMetadata(\get_class($object));
 		if (\method_exists($metadata, 'setIdentifierValues'))
 		{
 			$metadata->setIdentifierValues($object, $generatedValues);
