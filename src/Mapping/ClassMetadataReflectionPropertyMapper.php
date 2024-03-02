@@ -50,11 +50,13 @@ class ClassMetadataReflectionPropertyMapper implements
 		$fieldNames = $this->metadata->getFieldNames();
 		$associations = $this->metadata->getAssociationNames();
 
+		$propertyNames = \array_merge($fieldNames, $associations);
+
 		if (\is_object($data))
 		{
 			if (!\is_a($data, $this->metadata->getName()))
 			{
-				foreach ($fieldNames as $fieldName)
+				foreach ($propertyNames as $name)
 				{
 					$field = $this->getReflectionField($name);
 					$field->setValue($object, $field->getValue($data));
@@ -62,11 +64,13 @@ class ClassMetadataReflectionPropertyMapper implements
 				return;
 			}
 
-			$data = \array_map(
-				function ($fieldNames) use ($data) {
-					return $this->getReflectionField($name)->getValue(
-						$data);
-				}, $fieldNames);
+			$validData = [];
+			foreach ($propertyNames as $name)
+			{
+				$field = $this->getReflectionField($name);
+				$validData[$name] = $field->getValue($data);
+			}
+			$data = $validData;
 		}
 
 		foreach ($data as $name => $value)
