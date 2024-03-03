@@ -359,7 +359,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	{
 		$className = BasicEntity::class;
 		$table = [
-			'name' => 'Test_BasicEntity',
+			'name' => 'BasicEntities',
 			'schema' => 'Tests'
 		];
 

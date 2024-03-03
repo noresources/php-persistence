@@ -8,9 +8,12 @@
  */
 namespace NoreSources\Persistence\Mapping\Driver;
 
+use Doctrine\Inflector\Inflector;
+use Doctrine\Inflector\InflectorFactory;
+use Doctrine\Inflector\Language;
 use Doctrine\Instantiator\Instantiator;
+use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\Persistence\Mapping\ClassMetadata;
-use Doctrine\Persistence\Mapping\MappingException;
 use Doctrine\Persistence\Mapping\Driver\MappingDriver;
 use NoreSources\Container\Container;
 use NoreSources\Http\ParameterMapSerializer;
@@ -115,6 +118,22 @@ class ReflectionDriver implements MappingDriver
 				return \realpath($p) . '/';
 			}, $paths);
 		$this->driverFlags = $flags;
+	}
+
+	public function getInflector()
+	{
+		if (!isset($this->inflector))
+		{
+			$f = InflectorFactory::createForLanguage(Language::ENGLISH);
+			$this->inflector = $f->build();
+		}
+
+		return $this->inflector;
+	}
+
+	public function setInflector(Inflector $inflector)
+	{
+		$this->inflector = $inflector;
 	}
 
 	public function getAllClassNames()
@@ -272,10 +291,10 @@ class ReflectionDriver implements MappingDriver
 		}
 		elseif ($mapFunction == 'mapManyToMany')
 		{
-			$tableName = TypeDescription::getLocalName($className, true);
+			$tableName = $this->getTableNameFromClassName($className);
 			$tableName .= '_' . $columnName;
 			$tableName .= '_' .
-				TypeDescription::getLocalName($targetClassName, true);
+				$this->getTableNameFromClassName($targetClassName);
 
 			$mapping['joinTable'] = [
 				'name' => $tableName,
@@ -478,16 +497,18 @@ class ReflectionDriver implements MappingDriver
 			}
 		} // entity-listener
 
-		$primaryTable = [];
-		if (($table = Container::keyValue($entityOptions, 'table')))
+		// Doctrine ORM compatibility
 		{
-			$primaryTable['name'] = $table;
+			$primaryTable = [];
+			$tableName = $this->getTableNameFromClassName($className);
+			$primaryTable['name'] = Container::keyValue($entityOptions,
+				'table', $tableName);
 			if (($schema = Container::keyValue($entityOptions, 'schema')))
 				$primaryTable['schema'] = $schema;
-		}
 
-		self::invokeClassMetadataMethod($metadata, "setPrimaryTable",
-			$primaryTable);
+			self::invokeClassMetadataMethod($metadata, "setPrimaryTable",
+				$primaryTable);
+		}
 
 		$visited = [];
 
@@ -500,6 +521,12 @@ class ReflectionDriver implements MappingDriver
 				$this->processProperties($visited, $metadata, $file,
 					$reflectionClass, $defaultInstance);
 		}
+	}
+
+	protected function getTableNameFromClassName($className)
+	{
+		$name = TypeDescription::getLocalName($className, true);
+		return $this->getInflector()->pluralize($name);
 	}
 
 	protected function getQualifiedClassName($className, $namespace)
@@ -1416,6 +1443,12 @@ class ReflectionDriver implements MappingDriver
 	 * @var array
 	 */
 	private $metadataMappingCache = [];
+
+	/**
+	 *
+	 * @va Inflector
+	 */
+	private $inflector;
 
 	const MAPPING_FIELDS = 'fields';
 

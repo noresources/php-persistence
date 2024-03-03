@@ -2,7 +2,9 @@
 	xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
                             http://doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
 
-	<entity name="NoreSources\Persistence\TestData\BasicEntity" table="Test_BasicEntity" schema="Tests">
+	<entity name="NoreSources\Persistence\TestData\BasicEntity" 
+			table="BasicEntities" 
+			schema="Tests">
 		<id name="basicId"
 			column="bid"
 			type="integer">

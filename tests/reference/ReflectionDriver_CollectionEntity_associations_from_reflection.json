@@ -35,7 +35,7 @@
         "fieldName": "otherEntities",
         "targetEntity": "NoreSources\\Persistence\\TestData\\BasicEntity",
         "joinTable": {
-            "name": "CollectionEntity_otherEntities_BasicEntity",
+            "name": "CollectionEntities_otherEntities_BasicEntities",
             "joinColumns": [
                 {
                     "referencedColumnName": "collection_id",
