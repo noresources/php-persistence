@@ -8,14 +8,21 @@
  */
 namespace NoreSources\Persistence\Mapping\Traits;
 
+use Doctrine\Persistence\Mapping\ReflectionService;
 use NoreSources\Container\Container;
-use NoreSources\Reflection\ReflectionServiceInterface;
 
 /**
  * Use ReflectionService to set identifier values in a ClassMetadata
  */
-trait ReflectionServiceIdentifierValueClassMetadataTrait
+trait ReflectionServiceClassMetadataTrait
 {
+	use ReflectionServiceReferenceTrait;
+
+	public function initializeReflection(
+		ReflectionService $reflectionService)
+	{
+		$this->setReflection($reflectionService);
+	}
 
 	/**
 	 *
@@ -27,13 +34,13 @@ trait ReflectionServiceIdentifierValueClassMetadataTrait
 	{
 		$names = $this->getIdentifierFieldNames();
 		$values = [];
-		$flags = ReflectionServiceInterface::READABLE |
-			ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY |
-			ReflectionServiceInterface::EXPOSE_INHERITED_PROPERTY;
+
+		$reflectionService = $this->getReflectionService();
 		foreach ($names as $name)
 		{
-			$values[$name] = $this->getReflectionService()->getPropertyValue(
-				$object, $name, $flags);
+			$property = $reflectionService->getAccessibleProperty(
+				$this->getName(), $name);
+			$values[$name] = $property->getValue($object);
 		}
 
 		return $values;
@@ -51,11 +58,9 @@ trait ReflectionServiceIdentifierValueClassMetadataTrait
 		$names = $this->getIdentifierFieldNames();
 
 		$class = $this->getReflectionClass();
-		$flags = ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY |
-			ReflectionServiceInterface::EXPOSE_INHERITED_PROPERTY |
-			ReflectionServiceInterface::WRITABLE;
 
 		$c = \count($names);
+		$reflectionService = $this->getReflectionService();
 		for ($i = 0; $i < $c; $i++)
 		{
 			$name = $names[$i];
@@ -69,8 +74,8 @@ trait ReflectionServiceIdentifierValueClassMetadataTrait
 			else
 				$value = $generatedValues;
 
-			$property = $this->getReflectionService()->getReflectionProperty(
-				$class, $name, $flags);
+			$property = $reflectionService->getAccessibleProperty(
+				$this->getName(), $name);
 
 			$property->setValue($object, $value);
 		}

@@ -10,16 +10,15 @@ namespace NoreSources\Persistence;
 
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\ComparableInterface;
-use NoreSources\Persistence\Traits\ReflectionMetadataFieldTrait;
+use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Reflection\ReflectionServiceInterface;
 
 /**
  * Default object sorter implementation
  */
 class DefaultObjectSorter implements ObjectSorterInterface
-
 {
-	use ReflectionMetadataFieldTrait;
+	use ReflectionServiceReferenceTrait;
 
 	public function getReflectionFieldFlags()
 	{
@@ -28,7 +27,7 @@ class DefaultObjectSorter implements ObjectSorterInterface
 
 	public function __construct(ClassMetadata $metadata)
 	{
-		$this->setClassMetadata($metadata);
+		$this->metadata = $metadata;
 	}
 
 	public function sortObjects(&$list, $orderBy)
@@ -41,9 +40,12 @@ class DefaultObjectSorter implements ObjectSorterInterface
 
 	public function sortFunction($a, $b, $orderBy)
 	{
+		$className = $this->metadata->getName();
+		$reflectionService = $this->getReflectionService();
 		foreach ($orderBy as $name => $orientation)
 		{
-			$field = $this->getReflectionField($name);
+			$field = $reflectionService->getAccessibleProperty(
+				$className, $name);
 			$va = $field->getValue($a);
 			$vb = $field->getValue($b);
 			$c = $this->compareField($va, $vb);
@@ -64,4 +66,10 @@ class DefaultObjectSorter implements ObjectSorterInterface
 			return 0;
 		return ($a < $b) ? -1 : 1;
 	}
+
+	/**
+	 *
+	 * @var ClassMetadata
+	 */
+	private $metadata;
 }

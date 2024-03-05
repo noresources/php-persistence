@@ -11,11 +11,9 @@ namespace NoreSources\Persistence\Mapping;
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\Persistence\Event\Event;
 use NoreSources\Persistence\Mapping\Traits\IdGeneratorTypeClassnameTrait;
-use NoreSources\Persistence\Mapping\Traits\ReflectionServiceIdentifierValueClassMetadataTrait;
+use NoreSources\Persistence\Mapping\Traits\ReflectionServiceClassMetadataTrait;
 use NoreSources\Reflection\ReflectionDocComment;
 use NoreSources\Reflection\ReflectionFile;
-use NoreSources\Reflection\ReflectionService;
-use NoreSources\Reflection\ReflectionServiceInterface;
 use NoreSources\Text\Text;
 use NoreSources\Type\TypeDescription;
 use ReflectionProperty;
@@ -28,7 +26,7 @@ class ReflectionClassMetadata implements ClassMetadata
 {
 
 	use IdGeneratorTypeClassnameTrait;
-	use ReflectionServiceIdentifierValueClassMetadataTrait;
+	use ReflectionServiceClassMetadataTrait;
 
 	/**
 	 * Embed parent fields and associations
@@ -95,17 +93,6 @@ class ReflectionClassMetadata implements ClassMetadata
 
 	/**
 	 *
-	 * @return \NoreSources\Reflection\ReflectionServiceInterface
-	 */
-	public final function getReflectionService()
-	{
-		if (!isset($this->reflectionService))
-			$this->reflectionService = ReflectionService::getInstance();
-		return $this->reflectionService;
-	}
-
-	/**
-	 *
 	 * @return array
 	 */
 	public function getFieldMappings()
@@ -116,15 +103,14 @@ class ReflectionClassMetadata implements ClassMetadata
 				self::EMBED_PARENT;
 			$this->fieldMappings = [];
 			$cls = $this->getReflectionClass();
-			$flags = ReflectionServiceInterface::EXPOSE_HIDDEN_PROPERTY |
-				ReflectionServiceInterface::RW;
+
 			foreach ($cls->getProperties() as $p)
 			{
 				if (!$embed && $this->isParentProperty($p))
 					continue;
 				$this->fieldMappings[$p->getName()] = [
-					self::KEY_PROPERTY => $this->getReflectionService()->getReflectionProperty(
-						$cls, $p->getName(), $flags)
+					self::KEY_PROPERTY => $this->getReflectionService()->getAccessibleProperty(
+						$cls->getName(), $p->getName())
 				];
 			}
 
@@ -139,8 +125,8 @@ class ReflectionClassMetadata implements ClassMetadata
 							$this->reflectionMappingFlags))
 							continue;
 						$this->fieldMappings[$p->getName()] = [
-							self::KEY_PROPERTY => $this->getReflectionService()->getReflectionProperty(
-								$cls, $p->getName(), $flags)
+							self::KEY_PROPERTY => $this->getReflectionService()->getAccessibleProperty(
+								$cls->getName(), $p->getName())
 						];
 					}
 				}
@@ -385,12 +371,6 @@ class ReflectionClassMetadata implements ClassMetadata
 	 * @var string
 	 */
 	private $classNameBasedIdentifierFieldName;
-
-	/**
-	 *
-	 * @var ReflectionServiceInterface
-	 */
-	private $reflectionService;
 
 	/**
 	 *

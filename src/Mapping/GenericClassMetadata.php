@@ -14,9 +14,7 @@ use NoreSources\Persistence\Mapping\Traits\AssociationMappingClassMetadataTrait;
 use NoreSources\Persistence\Mapping\Traits\FieldMappingClassMetadataTrait;
 use NoreSources\Persistence\Mapping\Traits\IdGeneratorTypeClassnameTrait;
 use NoreSources\Persistence\Mapping\Traits\LifecycleCallbackClassMetadataTrait;
-use NoreSources\Persistence\Mapping\Traits\ReflectionServiceIdentifierValueClassMetadataTrait;
-use NoreSources\Reflection\ReflectionService;
-use NoreSources\Reflection\ReflectionServiceInterface;
+use NoreSources\Persistence\Mapping\Traits\ReflectionServiceClassMetadataTrait;
 
 /**
  * Minimalistice ClassMetadata implementation
@@ -26,7 +24,7 @@ class GenericClassMetadata extends \ArrayObject implements
 {
 
 	use IdGeneratorTypeClassnameTrait;
-	use ReflectionServiceIdentifierValueClassMetadataTrait;
+	use ReflectionServiceClassMetadataTrait;
 	use FieldMappingClassMetadataTrait;
 	use AssociationMappingClassMetadataTrait;
 	use LifecycleCallbackClassMetadataTrait;
@@ -149,24 +147,7 @@ class GenericClassMetadata extends \ArrayObject implements
 
 	/**
 	 *
-	 * @return ReflectionServiceInterface
-	 */
-	public function getReflectionService()
-	{
-		if (!isset($this->reflectionService))
-			$this->reflectionService = ReflectionService::getInstance();
-		return $this->reflectionService;
-	}
-
-	/**
-	 *
 	 * @var string
 	 */
 	private $className;
-
-	/**
-	 *
-	 * @var ReflectionService
-	 */
-	private $reflectionService;
 }

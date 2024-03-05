@@ -16,8 +16,8 @@ use NoreSources\DateTime;
 use NoreSources\Persistence\ObjectManagerAwareInterface;
 use NoreSources\Persistence\ObjectManagerProviderInterface;
 use NoreSources\Persistence\PropertyMappingInterface;
+use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Persistence\Traits\ObjectManagerReferenceTrait;
-use NoreSources\Persistence\Traits\ReflectionMetadataFieldTrait;
 
 /**
  * Implements PropertyMappingInterface using Reflection
@@ -26,7 +26,7 @@ class ClassMetadataReflectionPropertyMapper implements
 	PropertyMappingInterface, ObjectManagerAwareInterface,
 	ObjectManagerProviderInterface
 {
-	use ReflectionMetadataFieldTrait;
+	use ReflectionServiceReferenceTrait;
 	use ObjectManagerReferenceTrait;
 
 	/**
@@ -58,7 +58,8 @@ class ClassMetadataReflectionPropertyMapper implements
 			{
 				foreach ($propertyNames as $name)
 				{
-					$field = $this->getReflectionField($name);
+					$field = $this->getReflectionService()->getAccessibleProperty(
+						$this->metadata->getName(), $name);
 					$field->setValue($object, $field->getValue($data));
 				}
 				return;
@@ -67,7 +68,8 @@ class ClassMetadataReflectionPropertyMapper implements
 			$validData = [];
 			foreach ($propertyNames as $name)
 			{
-				$field = $this->getReflectionField($name);
+				$field = $this->getReflectionService()->getAccessibleProperty(
+					$this->metadata->getName(), $name);
 				$validData[$name] = $field->getValue($data);
 			}
 			$data = $validData;
@@ -102,7 +104,8 @@ class ClassMetadataReflectionPropertyMapper implements
 
 	protected function assignObjectProperty($object, $name, $value)
 	{
-		$field = $this->getReflectionField($name);
+		$field = $this->getReflectionService()->getAccessibleProperty(
+			$this->metadata->getName(), $name);
 		$fieldTypename = $this->metadata->getTypeOfField($name);
 
 		/**
@@ -152,7 +155,8 @@ class ClassMetadataReflectionPropertyMapper implements
 	protected function assignObjectAssociationPropertyAsIs($object,
 		$name, $value)
 	{
-		$field = $this->getReflectionField($name);
+		$field = $this->getReflectionService()->getAccessibleProperty(
+			$this->metadata->getName(), $name);
 		if ($this->metadata->isSingleValuedAssociation($name))
 		{
 			$field->setValue($object, $value);
@@ -167,7 +171,8 @@ class ClassMetadataReflectionPropertyMapper implements
 	protected function assignObjectAssociationProperty($object, $name,
 		$value)
 	{
-		$field = $this->getReflectionField($name);
+		$field = $this->getReflectionService()->getAccessibleProperty(
+			$this->metadata->getName(), $name);
 		$associationClassName = $this->metadata->getAssociationTargetClass(
 			$name);
 		$manager = $this->getObjectManager();
@@ -206,7 +211,8 @@ class ClassMetadataReflectionPropertyMapper implements
 
 	protected function fetchObjectProperty($object, $fieldName)
 	{
-		$field = $this->getReflectionField($fieldName);
+		$field = $this->getReflectionService()->getAccessibleProperty(
+			$this->metadata->getName(), $name);
 		$metadata = $this->getClassMetadata();
 		$type = $metadata->getTypeOfField($fieldName);
 		$value = $field->getValue($object);
@@ -260,4 +266,10 @@ class ClassMetadataReflectionPropertyMapper implements
 	 * @var Instantiator
 	 */
 	private $instanciator;
+
+	/**
+	 *
+	 * @var ClassMetadata
+	 */
+	private $metadata;
 }
