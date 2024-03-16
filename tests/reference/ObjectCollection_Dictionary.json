@@ -1,0 +1,30 @@
+{
+    "a": {
+        "id": "a",
+        "parent": null
+    },
+    "b": {
+        "id": "b",
+        "parent": null
+    },
+    "a.1": {
+        "id": "a.1",
+        "parent": "a"
+    },
+    "b.1": {
+        "id": "b.1",
+        "parent": "b"
+    },
+    "b.2": {
+        "id": "b.2",
+        "parent": "b"
+    },
+    "a.2.1": {
+        "id": "a.2.1",
+        "parent": "a.2"
+    },
+    "a.2": {
+        "id": "a.2",
+        "parent": "a"
+    }
+}

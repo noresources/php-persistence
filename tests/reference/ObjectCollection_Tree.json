@@ -1,0 +1,34 @@
+[
+    {
+        "object": {
+            "id": "a",
+            "parent": null
+        },
+        "children": {
+            "object": {
+                "id": "a.2",
+                "parent": "a"
+            },
+            "children": {
+                "object": {
+                    "id": "a.2.1",
+                    "parent": "a.2"
+                },
+                "children": []
+            }
+        }
+    },
+    {
+        "object": {
+            "id": "b",
+            "parent": null
+        },
+        "children": {
+            "object": {
+                "id": "b.2",
+                "parent": "b"
+            },
+            "children": []
+        }
+    }
+]
