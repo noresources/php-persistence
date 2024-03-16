@@ -45,7 +45,7 @@ class ReflectionClassMetadata implements ClassMetadata
 
 	public $lifecycleCallbacks;
 
-	public $isMappedSuperClass = false;
+	public $isMappedSuperclass = false;
 
 	/**
 	 *
@@ -77,7 +77,7 @@ class ReflectionClassMetadata implements ClassMetadata
 				$this->lifecycleCallbacks[$eventName] = [
 					$eventName
 				];
-			$this->isMappedSuperClass = $this->getReflectionClass()->isAbstract();
+			$this->isMappedSuperclass = $this->getReflectionClass()->isAbstract();
 		}
 	}
 

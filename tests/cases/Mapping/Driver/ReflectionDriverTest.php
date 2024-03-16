@@ -24,6 +24,7 @@ use NoreSources\Persistence\TestData\CustomIdEntity;
 use NoreSources\Persistence\TestData\EmbeddedObjectProperty;
 use NoreSources\Persistence\TestData\Product;
 use NoreSources\Persistence\TestData\User;
+use NoreSources\Persistence\TestData\Abstracts\ParentEntity;
 use NoreSources\Persistence\TestUtility\ResultComparisonTrait;
 use NoreSources\Persistence\TestUtility\TestEntityListener;
 use NoreSources\Persistence\TestUtility\TestEntityManagerFactoryTrait;
@@ -45,6 +46,36 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	public function tearDown(): void
 	{
 		$this->tearDownDerivedFileTestTrait();
+	}
+
+	public function testparentEntity()
+	{
+		$reflectionService = new RuntimeReflectionService();
+		$className = ParentEntity::class;
+		$flags = 0;
+		$reflectionDriver = new ReflectionDriver(
+			[
+				$this->getReferenceFileDirectory() . '/src'
+			], $flags);
+
+		$ormMeta = new ClassMetadata($className);
+		$basicMeta = new GenericClassMetadata($className);
+		$ormMeta->wakeupReflection($reflectionService);
+
+		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$reflectionDriver->loadMetadataForClass($className, $ormMeta);
+
+		$localName = TypeDescription::getLocalName($className, true);
+		$isMappedSuperclass = $ormMeta->isMappedSuperclass;
+		$this->assertTrue($isMappedSuperclass,
+			$localName . ' isMappedSuperclass (ORM ClassMetadata)');
+
+		$this->assertTrue(
+			ClassMetadataAdapter::retrieveMetadataProperty(
+				$isMappedSuperclass, $basicMeta, 'isMappedSuperclass'),
+			'Generic class metadata has $isMappedSuperclass');
+		$this->assertTrue($isMappedSuperclass,
+			$localName . ' isMappedSuperclass (Generic class metadata)');
 	}
 
 	public function testBasicEntity()

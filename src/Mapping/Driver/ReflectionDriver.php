@@ -351,8 +351,9 @@ class ReflectionDriver implements MappingDriver
 
 		if (!$this->hasTag($block, self::TAG_ENTITY))
 		{
-			self::invokeClassMetadataMethod($metadata,
-				'isMappedSuperClass', $reflectionClass->isAbstract());
+			$isMappedSuperclass = $reflectionClass->isAbstract();
+			ClassMetadataAdapter::assignMetadataElement($metadata,
+				'isMappedSuperclass', $isMappedSuperclass);
 			return;
 		}
 
@@ -381,15 +382,15 @@ class ReflectionDriver implements MappingDriver
 					"markReadOnly");
 		}
 
-		$isMappedSuperClass = false;
+		$isMappedSuperclass = false;
 		if (($mappedSuperclass = Container::keyValue($entityOptions,
 			'mappedSuperclass')) !== null)
-			$isMappedSuperClass = $mappedSuperclass;
+			$isMappedSuperclass = $mappedSuperclass;
 		else
-			$isMappedSuperClass = $reflectionClass->isAbstract();
+			$isMappedSuperclass = $reflectionClass->isAbstract();
 
-		self::invokeClassMetadataMethod($metadata, 'isMappedSuperClass',
-			$isMappedSuperClass);
+		ClassMetadataAdapter::assignMetadataElement($metadata,
+			'isMappedSuperclass', $isMappedSuperclass);
 
 		/**
 		 *

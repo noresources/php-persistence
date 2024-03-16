@@ -121,7 +121,8 @@ class GenericClassMetadataFactoryTest extends \PHPUnit\Framework\TestCase
 					'name',
 					'getFieldNames',
 					'getIdentifierFieldNames',
-					'getAssociationNames'
+					'getAssociationNames',
+					'isMappedSuperclass'
 				], $ormMetadata, $genericMetadata,
 				TypeDescription::getLocalName($className, true));
 		} // for each class // for each class

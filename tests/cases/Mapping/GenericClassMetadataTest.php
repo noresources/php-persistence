@@ -33,8 +33,8 @@ class GenericClassMetadataTest extends \PHPUnit\Framework\TestCase
 	public function testSet()
 	{
 		$foo = new GenericClassMetadata('Foo');
-		$foo->isMappedSuperClass = true;
-		$this->assertTrue($foo->isMappedSuperClass,
+		$foo->isMappedSuperclass = true;
+		$this->assertTrue($foo->isMappedSuperclass,
 			'Set magic method add key to ArrayObject');
 	}
 

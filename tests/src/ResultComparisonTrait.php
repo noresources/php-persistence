@@ -54,10 +54,10 @@ trait ResultComparisonTrait
 				if (\is_array($arguments))
 					$method = \array_shift($arguments);
 				elseif (\is_string($arguments))
-			{
-				$method = $arguments;
-				$arguments = [];
-			}
+				{
+					$method = $arguments;
+					$arguments = [];
+				}
 				else
 					throw new \InvalidArgumentException(
 						'string -> array, or string or int => array expected.');
