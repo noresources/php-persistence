@@ -295,8 +295,7 @@ class ReflectionClassMetadata implements ClassMetadata
 
 	public function getReflectionClass()
 	{
-		return $this->getReflectionService()->getReflectionClass(
-			$this->className);
+		return $this->getReflectionService()->getClass($this->className);
 	}
 
 	public function getReflectionFile()
