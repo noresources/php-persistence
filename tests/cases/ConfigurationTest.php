@@ -11,7 +11,7 @@ namespace NoreSources\Persistence\TestCase;
 use Doctrine\Common\EventManager;
 use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Persistence\Configuration;
-use NoreSources\Persistence\ObjectListenerResolver;
+use NoreSources\Persistence\Event\ObjectListenerResolver;
 use NoreSources\Persistence\Mapping\Driver\ReflectionDriver;
 
 class ConfigurationTest extends \PHPUnit\Framework\TestCase

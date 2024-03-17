@@ -15,6 +15,8 @@ use Doctrine\Persistence\Mapping\Driver\MappingDriver;
 use NoreSources\Persistence\Cache\CacheItemPoolAwareInterface;
 use NoreSources\Persistence\Cache\CacheItemPoolProviderInterface;
 use NoreSources\Persistence\Cache\Traits\CacheItemPoolReferenceTrait;
+use NoreSources\Persistence\Event\ObjectListenerResolver;
+use NoreSources\Persistence\Event\ObjectListenerResolverProviderInterface;
 use NoreSources\Persistence\Mapping\GenericClassMetadataFactory;
 use NoreSources\Persistence\Mapping\Driver\MappingDriverProviderInterface;
 use Psr\Container\ContainerInterface;

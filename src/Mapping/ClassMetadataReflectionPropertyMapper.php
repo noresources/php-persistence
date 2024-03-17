@@ -15,7 +15,6 @@ use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\DateTime;
 use NoreSources\Persistence\ObjectManagerAwareInterface;
 use NoreSources\Persistence\ObjectManagerProviderInterface;
-use NoreSources\Persistence\PropertyMappingInterface;
 use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Persistence\Traits\ObjectManagerReferenceTrait;
 

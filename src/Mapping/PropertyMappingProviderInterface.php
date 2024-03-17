@@ -6,7 +6,7 @@
  *
  * @package Persistence
  */
-namespace NoreSources\Persistence;
+namespace NoreSources\Persistence\Mapping;
 
 /**
  * Represents on class that can expose a PropertyMapper

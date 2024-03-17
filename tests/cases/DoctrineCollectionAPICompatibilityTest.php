@@ -9,7 +9,7 @@
 namespace NoreSources\Persistence\TestCase;
 
 use Doctrine\Common\Collections\Criteria;
-use NoreSources\Persistence\ObjectSorterInterface;
+use NoreSources\Persistence\Sorting\ObjectSorterInterface;
 
 class DoctrineCollectionAPICompatibilityTest extends \PHPUnit\Framework\TestCase
 {

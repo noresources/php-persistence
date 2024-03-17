@@ -6,7 +6,7 @@
  *
  * @package Persistence
  */
-namespace NoreSources\Persistence;
+namespace NoreSources\Persistence\Mapping;
 
 /**
  * Set and get object property value

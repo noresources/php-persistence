@@ -6,7 +6,7 @@
  *
  * @package Persistence
  */
-namespace NoreSources\Persistence;
+namespace NoreSources\Persistence\Sorting;
 
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\ComparableInterface;

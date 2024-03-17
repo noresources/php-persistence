@@ -6,7 +6,7 @@
  *
  * @package Persistence
  */
-namespace NoreSources\Persistence;
+namespace NoreSources\Persistence\Id;
 
 class DefaultObjectRuntimeIdGenerator implements
 	ObjectRuntimeIdGeneratorInterface

@@ -11,7 +11,7 @@ namespace NoreSources\Persistence\TestCase;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use Doctrine\Persistence\Mapping\ClassMetadataFactory;
-use NoreSources\Persistence\ObjectIdentifier;
+use NoreSources\Persistence\Id\ObjectIdentifier;
 use NoreSources\Persistence\Mapping\GenericClassMetadataFactory;
 use NoreSources\Persistence\TestData\User;
 

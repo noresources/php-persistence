@@ -10,9 +10,9 @@ namespace NoreSources\Persistence\TestCase;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\Driver\XmlDriver;
-use NoreSources\Persistence\ClosureExpressionVisitorObjectSorter;
-use NoreSources\Persistence\DefaultObjectSorter;
-use NoreSources\Persistence\ObjectSorterInterface;
+use NoreSources\Persistence\Sorting\ClosureExpressionVisitorObjectSorter;
+use NoreSources\Persistence\Sorting\DefaultObjectSorter;
+use NoreSources\Persistence\Sorting\ObjectSorterInterface;
 use NoreSources\Persistence\TestData\User;
 use NoreSources\Type\TypeDescription;
 use ArrayObject;
@@ -147,7 +147,7 @@ class ObjectSorterTest extends \PHPUnit\Framework\TestCase
 	protected function createXmlDriver()
 	{
 		return new XmlDriver([
-			__DIR__ . '/../reference/dcm'
+			__DIR__ . '/../../reference/dcm'
 		]);
 	}
 }

@@ -15,15 +15,15 @@ use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Container\Container;
 use NoreSources\Persistence\NotManagedException;
 use NoreSources\Persistence\ObjectContainerInterface;
-use NoreSources\Persistence\ObjectIdentifier;
 use NoreSources\Persistence\ObjectPersisterInterface;
-use NoreSources\Persistence\PropertyMappingInterface;
-use NoreSources\Persistence\PropertyMappingProviderInterface;
 use NoreSources\Persistence\UnitOfWork;
 use NoreSources\Persistence\Event\Event;
 use NoreSources\Persistence\Event\ListenerInvoker;
 use NoreSources\Persistence\Event\ListenerInvokerProviderInterface;
+use NoreSources\Persistence\Id\ObjectIdentifier;
 use NoreSources\Persistence\Mapping\ClassMetadataAdapter;
+use NoreSources\Persistence\Mapping\PropertyMappingInterface;
+use NoreSources\Persistence\Mapping\PropertyMappingProviderInterface;
 
 /**
  * Provide default implementation for ObjectManager.

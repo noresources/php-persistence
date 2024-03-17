@@ -6,7 +6,7 @@
  *
  * @package Persistence
  */
-namespace NoreSources\Persistence;
+namespace NoreSources\Persistence\Event;
 
 /**
  * Mimics Doctrine ORM EntityListenerResolver
