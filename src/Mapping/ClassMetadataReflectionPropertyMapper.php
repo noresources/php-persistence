@@ -31,6 +31,15 @@ class ClassMetadataReflectionPropertyMapper implements
 
 	/**
 	 *
+	 * @return \Doctrine\Persistence\Mapping\ClassMetadata
+	 */
+	public function getClassMetadata()
+	{
+		return $this->metadata;
+	}
+
+	/**
+	 *
 	 * @return \Doctrine\Instantiator\Instantiator
 	 */
 	public function getInstantiator()
@@ -212,8 +221,8 @@ class ClassMetadataReflectionPropertyMapper implements
 	protected function fetchObjectProperty($object, $fieldName)
 	{
 		$field = $this->getReflectionService()->getAccessibleProperty(
-			$this->metadata->getName(), $name);
-		$metadata = $this->getClassMetadata();
+			$this->metadata->getName(), $fieldName);
+		$metadata = $this->metadata;
 		$type = $metadata->getTypeOfField($fieldName);
 		$value = $field->getValue($object);
 
