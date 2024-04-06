@@ -49,11 +49,19 @@ class ReflectionDriver implements MappingDriver
 	const LIFECYCLE_METHOD_AUTO_MAPPING = 0x02;
 
 	/**
+	 * Consider any class definition located in source paths even if the entity PHP Doc tag is not
+	 * present in class DocBlock.
+	 *
+	 * @var number
+	 */
+	const ACCEPT_ANY_CLASS = 0x04;
+
+	/**
 	 * Embed parent fields and associations
 	 *
 	 * @var integer
 	 */
-	const EMBED_PARENT = 0x04;
+	const EMBED_PARENT = 0x10;
 
 	/**
 	 * When possible, keep short class names for association target class.
@@ -62,7 +70,7 @@ class ReflectionDriver implements MappingDriver
 	 *
 	 * @var number
 	 */
-	const ASSOCIATION_TARGET_SHORT_NAME = 0x08;
+	const ASSOCIATION_TARGET_SHORT_NAME = 0x20;
 
 	const TAG_ENTITY = 'entity';
 
@@ -147,6 +155,10 @@ class ReflectionDriver implements MappingDriver
 		{
 			$iterator = new \RecursiveDirectoryIterator($path);
 			$iterator = new \RecursiveIteratorIterator($iterator);
+
+			$all = (($this->driverFlags & self::ACCEPT_ANY_CLASS) ==
+				self::ACCEPT_ANY_CLASS);
+
 			/**
 			 *
 			 * @var \SplFileInfo $item
@@ -164,16 +176,30 @@ class ReflectionDriver implements MappingDriver
 				$all = $file->getClassNames();
 				$entities = [];
 
-				foreach ($all as $name)
+				if ((($this->driverFlags & self::ACCEPT_ANY_CLASS) ==
+					self::ACCEPT_ANY_CLASS))
 				{
-					$reflectionClass = $file->getClass($name);
-					if (!($reflectionClass instanceof ReflectionClass))
-						continue;
-					$text = $reflectionClass->getDocComment();
-					$block = new ReflectionDocComment($text);
-					if (!$this->hasTag($block, self::TAG_ENTITY))
-						continue;
-					$entities[] = $name;
+					foreach ($all as $name)
+					{
+						$reflectionClass = $file->getClass($name);
+						if (!($reflectionClass instanceof ReflectionClass))
+							continue;
+						$entities[] = $name;
+					}
+				}
+				else
+				{
+					foreach ($all as $name)
+					{
+						$reflectionClass = $file->getClass($name);
+						if (!($reflectionClass instanceof ReflectionClass))
+							continue;
+						$text = $reflectionClass->getDocComment();
+						$block = new ReflectionDocComment($text);
+						if (!$this->hasTag($block, self::TAG_ENTITY))
+							continue;
+						$entities[] = $name;
+					}
 				}
 
 				$this->classNames = \array_merge($this->classNames,
@@ -349,7 +375,10 @@ class ReflectionDriver implements MappingDriver
 		$block = new ReflectionDocComment(
 			$reflectionClass->getDocComment());
 
-		if (!$this->hasTag($block, self::TAG_ENTITY))
+		$all = (($this->driverFlags & self::ACCEPT_ANY_CLASS) ==
+			self::ACCEPT_ANY_CLASS);
+
+		if (!($all || $this->hasTag($block, self::TAG_ENTITY)))
 		{
 			$isMappedSuperclass = $reflectionClass->isAbstract();
 			ClassMetadataAdapter::assignMetadataElement($metadata,
@@ -772,7 +801,11 @@ class ReflectionDriver implements MappingDriver
 
 			if ($mapFunction == 'mapField')
 				$this->setAutomaticMapping($mapping, $file, $property,
-					$block, $defaultInstance);
+					$block,
+					[
+						'defaultInstance' => $defaultInstance,
+						'isAssociation' => $mapFunction != 'mapField'
+					]);
 
 			if ($mapFunction == 'mapField')
 				$this->metadataMappingCache[$className][self::MAPPING_FIELDS][$name] = $mapping;
@@ -972,7 +1005,7 @@ class ReflectionDriver implements MappingDriver
 	 */
 	protected function setAutomaticMapping(&$mapping,
 		ReflectionFile $file, \ReflectionProperty $property,
-		ReflectionDocComment $block, $defaultInstance = null)
+		ReflectionDocComment $block, $context = array())
 	{
 		$nullable = false;
 		if (!isset($mapping['type']))
@@ -980,14 +1013,14 @@ class ReflectionDriver implements MappingDriver
 			$var = $block->getVariable();
 			if (!\is_null($var))
 				$this->setTypeAutomaticMapping($mapping, $file,
-					$property, $var['types']);
+					$property, $var['types'], $context);
 		}
 
 		if (!(Container::keyExists($mapping, 'options') &&
 			Container::keyExists($mapping['options'], 'default')))
 		{
 			$this->setDefaultAutomaticMapping($mapping, $file, $property,
-				$defaultInstance);
+				$context);
 		}
 
 		if (!(Container::keyExists($mapping, 'options') &&
@@ -1029,9 +1062,11 @@ class ReflectionDriver implements MappingDriver
 
 	protected function setDefaultAutomaticMapping(&$mapping,
 		ReflectionFile $file, \ReflectionProperty $property,
-		$defaultInstance = null)
+		$context = array())
 	{
 		$value = null;
+		$defaultInstance = Container::keyValue($context,
+			'defaultInstance', null);
 		if (!$this->retrievePropertyDefaultValue($value, $property,
 			$defaultInstance))
 			return;
@@ -1080,7 +1115,8 @@ class ReflectionDriver implements MappingDriver
 	 *        	List of type names from @var tag
 	 */
 	protected function setTypeAutomaticMapping(&$mapping,
-		ReflectionFile $file, \ReflectionProperty $property, $types)
+		ReflectionFile $file, \ReflectionProperty $property, $types,
+		$context = array())
 	{
 		$assigned = false;
 		$namespace = $property->getDeclaringClass()->getNamespaceName();
@@ -1111,31 +1147,26 @@ class ReflectionDriver implements MappingDriver
 					$mapping['type'] = $type['type'];
 				continue;
 			}
-
-			if (isset($mapping['type']))
-				continue;
-
 			$name = $type['type'];
-			$className = null;
+			try
+			{
+				$localName = $name;
+				$name = $this->resolveClassname($name, $file, $namespace);
 
-			$className = $this->resolveClassname($name, $file,
-				$namespace);
-
-			if (!$className)
-				continue;
-			/**
-			 *
-			 * @todo more smart conversions
-			 */
-
-			$typeName = null;
-			if (\in_array($className, $this->getAllClassNames()))
-				$typeName = $className;
-			elseif (\is_a($className, \DateTimeInterface::class, true))
-				$typeName = 'datetime';
-
-			if ($typeName)
-				$mapping['type'] = $typeName;
+				$isAssociation = Container::keyValue($context,
+					'isAssociation', false);
+				$useShortName = (($this->driverFlags &
+					self::ASSOCIATION_TARGET_SHORT_NAME) ==
+					self::ASSOCIATION_TARGET_SHORT_NAME);
+				if ($isAssociation && $useShortName &&
+					($typeNamespace = \implode('\\',
+						TypeDescription::getNamespaces($name, true))) &&
+					($typeNamespace == $namespace))
+					$name = $localName;
+			}
+			catch (\Exception $e)
+			{}
+			$mapping['type'] = $name;
 		}
 	}
 
@@ -1144,7 +1175,7 @@ class ReflectionDriver implements MappingDriver
 	{
 		if (\class_exists($className))
 			return $className;
-		return $fqn = $file->getQualifiedName($className, NULL,
+		return $file->getQualifiedName($className, NULL,
 			[
 				ReflectionFile::LOOKUP_GLOBAL => true,
 				ReflectionFile::LOOKUP_NAMESPACES => [
