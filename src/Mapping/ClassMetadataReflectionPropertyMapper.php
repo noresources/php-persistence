@@ -17,6 +17,7 @@ use NoreSources\Persistence\ObjectManagerAwareInterface;
 use NoreSources\Persistence\ObjectManagerProviderInterface;
 use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Persistence\Traits\ObjectManagerReferenceTrait;
+use NoreSources\Container\Container;
 
 /**
  * Implements PropertyMappingInterface using Reflection
@@ -141,8 +142,20 @@ class ClassMetadataReflectionPropertyMapper implements
 		$expectedClassName)
 	{
 		if ($value === null)
+		{
+			$metadata = $this->getClassMetadata();
+			$mapping = null;
+			if (ClassMetadataAdapter::invokeMetadataMethod($mapping,
+				$metadata, 'getFieldMapping', $fieldName) &&
+				Container::keyValue($mapping, 'nullable', false))
+			{
+				return null;
+			}
+
 			return $this->getInstantiator()->instantiate(
 				$expectedClassName);
+		}
+
 		if (\is_object($value) && \is_a($value, $expectedClassName))
 			return $value;
 
