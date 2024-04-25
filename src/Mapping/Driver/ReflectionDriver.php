@@ -869,7 +869,10 @@ class ReflectionDriver implements MappingDriver
 				else
 					$value = \call_user_func($f, $value, $metadata);
 
-			$value = TypeConversion::to($value, $type, $value);
+			$value = TypeConversion::to($type, $value,
+				[
+					TypeConversion::OPTION_FALLBACK => $value
+				]);
 
 			if (($f = Container::keyValue($parameterProperties,
 				'post-set')))
