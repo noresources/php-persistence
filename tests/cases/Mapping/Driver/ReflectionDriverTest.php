@@ -26,6 +26,7 @@ use NoreSources\Persistence\TestData\Product;
 use NoreSources\Persistence\TestData\User;
 use NoreSources\Persistence\TestData\Abstracts\ParentEntity;
 use NoreSources\Persistence\TestUtility\ResultComparisonTrait;
+use NoreSources\Persistence\TestUtility\TestDBALTypeExtensionTrait;
 use NoreSources\Persistence\TestUtility\TestEntityListener;
 use NoreSources\Persistence\TestUtility\TestEntityManagerFactoryTrait;
 use NoreSources\Test\DerivedFileTestTrait;
@@ -37,9 +38,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 	use DerivedFileTestTrait;
 	use TestEntityManagerFactoryTrait;
 	use ResultComparisonTrait;
+	use TestDBALTypeExtensionTrait;
 
 	public function setUp(): void
 	{
+		$this->setupDBALExtensions();
 		$this->setUpDerivedFileTestTrait(__DIR__ . '/../../..');
 	}
 
