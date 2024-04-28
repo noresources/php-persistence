@@ -67,6 +67,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 		return $this->collection->partition($p);
 	}
 
+	#[\ReturnTypeWillChange]
 	public function offsetExists($offset)
 	{
 		return $this->collection->offsetExists($offset);
@@ -82,6 +83,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 		return $this->collection->get($key);
 	}
 
+	#[\ReturnTypeWillChange]
 	public function offsetUnset($offset)
 	{
 		return $this->collection->offsetUnset($offset);
@@ -112,6 +114,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 		return $this->collection->add($element);
 	}
 
+	#[\ReturnTypeWillChange]
 	public function offsetGet($offset)
 	{
 		return $this->collection->offsetGet($offset);
@@ -147,6 +150,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 		return $this->collection->isEmpty();
 	}
 
+	#[\ReturnTypeWillChange]
 	public function count()
 	{
 		return $this->collection->count();
@@ -157,6 +161,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 		return $this->collection->getKeys();
 	}
 
+	#[\ReturnTypeWillChange]
 	public function offsetSet($offset, $value)
 	{
 		return $this->collection->offsetSet($offset, $value);
@@ -172,6 +177,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 		return $this->collection->contains($element);
 	}
 
+	#[\ReturnTypeWillChange]
 	public function getIterator()
 	{
 		return $this->collection->getIterator();

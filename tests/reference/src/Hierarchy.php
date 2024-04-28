@@ -35,6 +35,7 @@ class Hierarchy implements \JsonSerializable
 		$this->parent = $parent;
 	}
 
+	#[\ReturnTypeWillChange]
 	public function jsonSerialize()
 	{
 		return [

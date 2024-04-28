@@ -8,13 +8,11 @@
  */
 namespace NoreSources\Persistence\Expr;
 
-use Doctrine\Persistence\Mapping\ClassMetadata;
-use Doctrine\Common\Collections\Expr\Comparison;
 use Doctrine\Common\Collections\Expr\ClosureExpressionVisitor;
-use Doctrine\Common\Comparable;
-use NoreSources\Type\TypeDescription;
-use NoreSources\Type\TypeConversion;
+use Doctrine\Common\Collections\Expr\Comparison;
+use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\ComparableInterface;
+use NoreSources\Type\TypeConversion;
 
 class ClassMetadataClosureExpressionVisitor extends ClosureExpressionVisitor
 {
@@ -32,7 +30,7 @@ class ClassMetadataClosureExpressionVisitor extends ClosureExpressionVisitor
 		if (!$this->metadata->hasField($field))
 			return parent::walkComparison($comparison);
 		$type = $this->metadata->getTypeOfField($field);
-		if (!\class_exists($type))
+		if (!(\is_string($type) && \class_exists($type)))
 			return parent::walkComparison($comparison);
 
 		if (\is_a($type, ComparableInterface::class, true))

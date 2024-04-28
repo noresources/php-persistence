@@ -13,11 +13,11 @@ use Doctrine\Instantiator\Instantiator;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\DateTime;
+use NoreSources\Container\Container;
 use NoreSources\Persistence\ObjectManagerAwareInterface;
 use NoreSources\Persistence\ObjectManagerProviderInterface;
 use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Persistence\Traits\ObjectManagerReferenceTrait;
-use NoreSources\Container\Container;
 
 /**
  * Implements PropertyMappingInterface using Reflection
@@ -117,13 +117,21 @@ class ClassMetadataReflectionPropertyMapper implements
 			$this->metadata->getName(), $name);
 		$fieldTypename = $this->metadata->getTypeOfField($name);
 
+		if (!\is_string($fieldTypename))
+		{
+			$field->setValue($object, $value);
+			return;
+		}
+
 		/**
 		 *
 		 * @todo A cleaner solution
 		 */
 
-		if (\strcasecmp($fieldTypename, 'datetime') == 0 ||
-			(\class_exists($fieldTypename) &&
+		$isClass = \class_exists($fieldTypename);
+
+		if ((\strpos(\mb_strtolower($fieldTypename), 'datetime') === 0) ||
+			($isClass &&
 			\is_a($fieldTypename, \DateTimeInterface::class, true)))
 		{
 			if (\is_array($value))
@@ -131,7 +139,7 @@ class ClassMetadataReflectionPropertyMapper implements
 			elseif (\is_string($value))
 				$value = new \DateTime($value);
 		}
-		elseif (\class_exists($fieldTypename))
+		elseif ($isClass)
 			$value = $this->unserializeEmbeddedObject($value, $name,
 				$fieldTypename);
 
@@ -241,7 +249,7 @@ class ClassMetadataReflectionPropertyMapper implements
 		if ($value instanceof \DateTimeInterface)
 			$value = $this->serializeObjectDataTimeProperty($value,
 				$fieldName);
-		elseif (\class_exists($type))
+		elseif (\is_string($type) && \class_exists($type))
 			$value = $this->serializeObjectEmbeddedObjectProperty(
 				$value, $fieldName, $type);
 		return $value;

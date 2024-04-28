@@ -666,7 +666,7 @@ trait ObjectManagerTrait
 	 *
 	 * @var ClassMetadataFactory
 	 */
-	private $classFactory;
+	private $metadataFactory;
 
 	/**
 	 *
