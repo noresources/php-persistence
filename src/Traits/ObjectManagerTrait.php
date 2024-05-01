@@ -14,6 +14,7 @@ use Doctrine\Persistence\Mapping\ClassMetadata;
 use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Container\Container;
 use NoreSources\Persistence\NotManagedException;
+use NoreSources\Persistence\ObjectComparer;
 use NoreSources\Persistence\ObjectContainerInterface;
 use NoreSources\Persistence\ObjectPersisterInterface;
 use NoreSources\Persistence\UnitOfWork;
@@ -24,6 +25,7 @@ use NoreSources\Persistence\Id\ObjectIdentifier;
 use NoreSources\Persistence\Mapping\ClassMetadataAdapter;
 use NoreSources\Persistence\Mapping\PropertyMappingInterface;
 use NoreSources\Persistence\Mapping\PropertyMappingProviderInterface;
+use NoreSources\Persistence\Mapping\ReflectionService;
 
 /**
  * Provide default implementation for ObjectManager.
@@ -148,6 +150,14 @@ trait ObjectManagerTrait
 	{
 		if (isset($this->unitOfWork))
 			$this->unitOfWork->clear(true);
+		if ($objectName)
+		{}
+		else
+			$this->foreachRepository(
+				function ($repository) {
+					if ($repository instanceof ObjectContainerInterface)
+						$repository->detachAll();
+				});
 	}
 
 	/**
@@ -249,18 +259,18 @@ trait ObjectManagerTrait
 
 			$event = new LifecycleEventArgs($object, $this);
 
-			$repositoryObject = $object;
 			$initialId = NULL;
+			$currentId = null;
+			$restorId = null;
 			if (($initialId = Container::keyValue($task,
 				UnitOfWork::KEY_IDENTITY, NULL)) !== NULL)
 			{
-				$id = $metadata->getIdentifierValues($object);
-				if (!ObjectIdentifier::equals($initialId, $id))
+				$currentId = $metadata->getIdentifierValues($object);
+				if (!ObjectIdentifier::equals($initialId, $currentId))
 				{
-					$repositoryObject = clone $object;
-					$this->setObjectIdentifierValues($repositoryObject,
-						$initialId, $metadata);
-					$id = $metadata->getIdentifierValues($object);
+					$restorId = true;
+					$this->setObjectIdentifierValues($object, $initialId,
+						$metadata);
 				}
 			}
 
@@ -268,14 +278,16 @@ trait ObjectManagerTrait
 			{
 				case UnitOfWork::OPERATION_INSERT:
 
-					$persister->persist($repositoryObject);
+					$persister->persist($object);
 					if ($initialId === NULL)
 					{
-						$id = $metadata->getIdentifierValues(
-							$repositoryObject);
+						$id = $metadata->getIdentifierValues($object);
 						$this->unitOfWork->setObjectIdentity($object,
 							$id);
 					}
+
+					$this->unitOfWork->setObjectOriginalCopy($object,
+						clone $object);
 
 					if ($listenerInvoker)
 						$listenerInvoker->invoke($metadata,
@@ -283,18 +295,55 @@ trait ObjectManagerTrait
 				break;
 				case UnitOfWork::OPERATION_UPDATE:
 
-					if ($listenerInvoker)
-						$listenerInvoker->invoke($metadata,
-							Event::preUpdate, $object, $event);
+					$repository = null;
+					$original = null;
+					if ($this->hasRepository($className))
+					{
+						$repository = $this->defaultGetRepository(
+							$className);
+						if ($repository instanceof ObjectContainerInterface)
+							$original = $repository->getObjectOriginalCopy(
+								$object);
+					}
 
-					$persister->persist($repositoryObject);
+					if (!$original)
+						$original = $this->unitOfWork->getObjectOriginalCopy(
+							$object);
+
+					$eventName = Event::preUpdate;
+
+					if ($listenerInvoker &&
+						$listenerInvoker->hasListenerFor($metadata,
+							$eventName))
+					{
+						$reflectionService = ReflectionService::getInstance();
+
+						$changeSet = ObjectComparer::computeChangeSet(
+							$metadata, $reflectionService, $original,
+							$object);
+
+						$e = new \Doctrine\Persistence\Event\PreUpdateEventArgs(
+							$object, $this, $changeSet);
+
+						$listenerInvoker->invoke($metadata, $eventName,
+							$object, $e);
+					}
+
+					$persister->persist($object);
 					if ($initialId === NULL)
 					{
-						$id = $metadata->getIdentifierValues(
-							$repositoryObject);
+						$id = $metadata->getIdentifierValues($object);
 						$this->unitOfWork->setObjectIdentity($object,
 							$id);
 					}
+
+					if ($repository &&
+						($repository instanceof ObjectContainerInterface))
+						$repository->setObjectOriginalCopy($object,
+							clone $object);
+
+					$this->unitOfWork->setObjectOriginalCopy($object,
+						clone $object);
 
 					if ($listenerInvoker)
 						$listenerInvoker->invoke($metadata,
@@ -306,13 +355,19 @@ trait ObjectManagerTrait
 						$listenerInvoker->invoke($metadata,
 							Event::preRemove, $object, $event);
 
-					$persister->remove($repositoryObject);
+					$persister->remove($object);
+
+					$this->unitOfWork->setObjectOriginalCopy($object,
+						clone $object);
 
 					if ($listenerInvoker)
 						$listenerInvoker->invoke($metadata,
 							Event::postRemove, $object, $event);
 				break;
 			}
+
+			if ($restorId)
+				$this->setObjectIdentifierValues($object, $currentId);
 		}
 		$this->unitOfWork->clear(false);
 	}
@@ -427,9 +482,8 @@ trait ObjectManagerTrait
 		if ($this->hasRepository($className))
 		{
 			$repository = $this->getRepository($className);
-			if ($repository instanceof ObjectContainerInterface &&
-				$repository->contains($object))
-				return true;
+			if ($repository instanceof ObjectContainerInterface)
+				return $repository->contains($object);
 		}
 
 		return false;
@@ -518,6 +572,16 @@ trait ObjectManagerTrait
 		ClassMetadataFactory $factory)
 	{
 		$this->metadataFactory = $factory;
+	}
+
+	/**
+	 *
+	 * @return \NoreSources\Persistence\UnitOfWork
+	 * @deprecated Used for tests only
+	 */
+	public function getUnitOfWork()
+	{
+		return $this->unitOfWork;
 	}
 
 	/**
