@@ -54,6 +54,46 @@ class ListenerInvoker
 	}
 
 	/**
+	 *
+	 * @param string $eventName
+	 *        	Event name
+	 * @param integer $invoke
+	 *        	Type of invokers
+	 * @return boolean
+	 */
+	public function hasListenerFor(ClassMetadata $metadata, $eventName,
+		$invoke = self::INVOKE_ALL)
+	{
+		if ($invoke & self::INVOKE_CALLBACKS &&
+			($lifecycleCallbacks = Container::keyValue($metadata,
+				'lifecycleCallbacks')) &&
+			($lifecycleCallbacks = Container::keyValue(
+				$lifecycleCallbacks, $eventName)))
+		{
+
+			if (\is_string($lifecycleCallbacks))
+				return true;
+			elseif (\count($lifecycleCallbacks))
+				return true;
+		}
+
+		if ($invoke & self::INVOKE_LISTENERS &&
+			(($objectListeners = Container::keyValue($metadata,
+				'entityListeners') ||
+			($objectListeners = Container::keyValue($metadata,
+				'objectListeners')))) &&
+			($objectListeners = Container::keyValue($objectListeners,
+				$eventName)))
+		{
+			if (\count($objectListeners))
+				return true;
+		}
+
+		return ($invoke & self::INVOKE_MANAGER && $this->eventManager) &&
+			$this->eventManager->hasListeners($eventName);
+	}
+
+	/**
 	 * Dispatches the lifecycle event of the given object.
 	 *
 	 * @param ClassMetadata $metadata
