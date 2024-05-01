@@ -20,6 +20,11 @@ interface ObjectContainerInterface
 	function contains(object $object);
 
 	/**
+	 * Detach all objects
+	 */
+	function detachAll();
+
+	/**
 	 * Make the given object contained in the interface implementation instance.
 	 *
 	 * @param object $object
@@ -34,4 +39,21 @@ interface ObjectContainerInterface
 	 *        	Object to forget
 	 */
 	function detach(object $object);
+
+	/**
+	 * Get the original copy of the given object
+	 * as it when it was attached
+	 *
+	 * @param object $object
+	 */
+	function getObjectOriginalCopy(object $object);
+
+	/**
+	 *
+	 * @param object $object
+	 *        	Object to set the original state
+	 * @param object $original
+	 *        	Clone of $object considered as the original state.
+	 */
+	function setObjectOriginalCopy(object $object, object $original);
 }

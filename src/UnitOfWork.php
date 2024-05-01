@@ -35,6 +35,8 @@ class UnitOfWork implements ObjectContainerInterface
 	 */
 	const KEY_IDENTITY = 2;
 
+	const KEY_ORIGINAL_OBJECT = 3;
+
 	/**
 	 * Store a new object
 	 *
@@ -86,8 +88,29 @@ class UnitOfWork implements ObjectContainerInterface
 		if (isset($this->managedObjects[$oid]))
 			return;
 		$this->managedObjects[$oid] = [
-			self::KEY_OBJECT => $object
+			self::KEY_OBJECT => $object,
+			self::KEY_ORIGINAL_OBJECT => clone $object
 		];
+	}
+
+	public function getObjectOriginalCopy(object $object)
+	{
+		$oid = $this->getObjectOID($object);
+		if (!isset($this->managedObjects[$oid]))
+			$this->notManagedException($object);
+		if (!isset(
+			$this->managedObjects[$oid][self::KEY_ORIGINAL_OBJECT]))
+			return null;
+		return $this->managedObjects[$oid][self::KEY_ORIGINAL_OBJECT];
+	}
+
+	public function setObjectOriginalCopy(object $object,
+		object $original)
+	{
+		$oid = $this->getObjectOID($object);
+		if (!isset($this->managedObjects[$oid]))
+			$this->notManagedException($object);
+		$this->managedObjects[$oid][self::KEY_ORIGINAL_OBJECT] = $original;
 	}
 
 	public function detach($object)
@@ -98,6 +121,11 @@ class UnitOfWork implements ObjectContainerInterface
 		$index = \array_search($oid, $this->operationOrder);
 		unset($this->managedObjects[$oid]);
 		\array_splice($this->operationOrder, $index, 1);
+	}
+
+	public function detachAll()
+	{
+		$this->clear(true);
 	}
 
 	public function clear($full)
@@ -157,7 +185,8 @@ class UnitOfWork implements ObjectContainerInterface
 	{
 		if (!isset($this->managedObjects[$oid]))
 			$this->managedObjects[$oid] = [
-				self::KEY_OBJECT => $object
+				self::KEY_OBJECT => $object,
+				self::KEY_ORIGINAL_OBJECT => clone $object
 			];
 
 		if (isset($this->managedObjects[$oid][self::KEY_OPERATION]))
