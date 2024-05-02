@@ -83,8 +83,10 @@ trait FieldMappingClassMetadataTrait
 	 */
 	public function isIdentifier($fieldName)
 	{
-		return Container::keyValue($this->fieldMappings, $fieldName,
-			false) ? true : false;
+		if (!Container::keyExists($this->fieldMappings, $fieldName))
+			return false;
+		return Container::keyValue($this->fieldMappings[$fieldName],
+			'id', false);
 	}
 
 	/**
