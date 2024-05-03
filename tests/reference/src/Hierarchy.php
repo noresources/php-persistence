@@ -10,7 +10,7 @@ namespace NoreSources\Persistence\TestData;
 
 /**
  *
- * @persistent-entity
+ * @persistent-object
  */
 class Hierarchy implements \JsonSerializable
 {

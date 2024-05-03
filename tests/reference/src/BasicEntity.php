@@ -10,9 +10,9 @@ namespace NoreSources\Persistence\TestData;
 
 /**
  *
- * @persistent-entity schema=Tests
+ * @persistent-object schema=Tests
  * @persistent-lifecycle-callbacks pre-persist=prePersistTask
- * @persistent-entity-listener class="\\NoreSources\\Persistence\\TestUtility\\TestEntityListener"
+ * @persistent-object-listener class="\\NoreSources\\Persistence\\TestUtility\\TestEntityListener"
  *
  */
 class BasicEntity

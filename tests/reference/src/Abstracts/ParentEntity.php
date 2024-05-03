@@ -16,7 +16,7 @@ use NoreSources\Persistence\TestData\Traits\CoolnessTrait;
  *
  * Becoause this class is abstract, it will be considered by default as a mapped superclass
  *
- * @persistent-entity
+ * @persistent-object
  *
  */
 abstract class ParentEntity

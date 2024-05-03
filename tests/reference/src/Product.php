@@ -3,7 +3,7 @@ namespace NoreSources\Persistence\TestData;
 
 /**
  *
- * @persistent-entity table=products
+ * @persistent-object table=products
  */
 class Product
 {

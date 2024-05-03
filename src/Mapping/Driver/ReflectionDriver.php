@@ -49,7 +49,7 @@ class ReflectionDriver implements MappingDriver
 	const LIFECYCLE_METHOD_AUTO_MAPPING = 0x02;
 
 	/**
-	 * Consider any class definition located in source paths even if the entity PHP Doc tag is not
+	 * Consider any class definition located in source paths even if the object PHP Doc tag is not
 	 * present in class DocBlock.
 	 *
 	 * @var number
@@ -72,9 +72,9 @@ class ReflectionDriver implements MappingDriver
 	 */
 	const ASSOCIATION_TARGET_SHORT_NAME = 0x20;
 
-	const TAG_ENTITY = 'entity';
+	const TAG_OBJECT = 'object';
 
-	const TAG_FIELD = 'field';
+	const TAG_PROPERTY = 'property';
 
 	const TAG_ID = 'id';
 
@@ -196,7 +196,11 @@ class ReflectionDriver implements MappingDriver
 							continue;
 						$text = $reflectionClass->getDocComment();
 						$block = new ReflectionDocComment($text);
-						if (!$this->hasTag($block, self::TAG_ENTITY))
+
+						$hasObjectTag = $this->hasTag($block,
+							self::TAG_OBJECT);
+
+						if (!$hasObjectTag)
 							continue;
 						$entities[] = $name;
 					}
@@ -378,7 +382,9 @@ class ReflectionDriver implements MappingDriver
 		$all = (($this->driverFlags & self::ACCEPT_ANY_CLASS) ==
 			self::ACCEPT_ANY_CLASS);
 
-		if (!($all || $this->hasTag($block, self::TAG_ENTITY)))
+		$hasObjectTag = $this->hasTag($block, self::TAG_OBJECT);
+
+		if (!($all || $hasObjectTag))
 		{
 			$isMappedSuperclass = $reflectionClass->isAbstract();
 			ClassMetadataAdapter::assignMetadataElement($metadata,
@@ -392,27 +398,30 @@ class ReflectionDriver implements MappingDriver
 			$instantiator = new Instantiator();
 			$defaultInstance = $instantiator->instantiate($className);
 		}
-		$entity = $this->getTag($block, self::TAG_ENTITY);
-		$entityParameters = self::getEntityTagParametersDescriptor();
-		$entityOptions = [];
+		$object = '';
+		if ($this->hasTag($block, self::TAG_OBJECT))
+			$object = $this->getTag($block, self::TAG_OBJECT);
 
-		if (!empty($entity))
+		$objectParameters = self::getObjectTagParametersDescriptor();
+		$objectOptions = [];
+
+		if (!empty($object))
 		{
-			$entityParameters = self::getEntityTagParametersDescriptor();
-			self::parseParameters($entityOptions, $entity, $metadata,
-				self::getEntityTagParametersDescriptor());
-			if (($repositoryClass = Container::keyValue($entityOptions,
+			$objectParameters = self::getObjectTagParametersDescriptor();
+			self::parseParameters($objectOptions, $object, $metadata,
+				self::getObjectTagParametersDescriptor());
+			if (($repositoryClass = Container::keyValue($objectOptions,
 				'repositoryClass')))
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"setCustomRepositoryClass", $repositoryClass);
-			if (Container::keyValue($entityOptions, 'readOnly', false) ===
+			if (Container::keyValue($objectOptions, 'readOnly', false) ===
 				true)
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"markReadOnly");
 		}
 
 		$isMappedSuperclass = false;
-		if (($mappedSuperclass = Container::keyValue($entityOptions,
+		if (($mappedSuperclass = Container::keyValue($objectOptions,
 			'mappedSuperclass')) !== null)
 			$isMappedSuperclass = $mappedSuperclass;
 		else
@@ -449,8 +458,9 @@ class ReflectionDriver implements MappingDriver
 				foreach ($parameters as $parameter => $event)
 				{
 					if (\method_exists($class, $event))
-						self::invokeClassMetadataMethod($metadata,
-							"addLifecycleCallback", $event, $event);
+						ClassMetadataAdapter::assignMetadataElement(
+							$metadata, "addLifecycleCallback", $event,
+							$event);
 				}
 				continue;
 			}
@@ -462,7 +472,7 @@ class ReflectionDriver implements MappingDriver
 				if (!$callback)
 					continue;
 
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"addLifecycleCallback", $callback, $event);
 			}
 		}
@@ -471,20 +481,21 @@ class ReflectionDriver implements MappingDriver
 		{
 			foreach ($this->getEventParameters() as $parameter => $event)
 			{
-				if (self::invokeClassMetadataMethod($metadata,
-					"hasLifecycleCallbacks", $event))
+				if (ClassMetadataAdapter::assignMetadataElement(
+					$metadata, "hasLifecycleCallbacks", $event))
 					continue;
 				if ($reflectionClass->hasMethod($event) &&
 					($method = $reflectionClass->getMethod($event)) &&
 					(!$method->isStatic() && $method->isPublic()))
 				{
-					self::invokeClassMetadataMethod($metadata,
-						"addLifecycleCallback", $event, $event);
+					ClassMetadataAdapter::assignMetadataElement(
+						$metadata, "addLifecycleCallback", $event,
+						$event);
 				}
 			}
 		}
 
-		foreach ($this->getTags($block, 'entity-listener') as $text)
+		foreach ($this->getTags($block, 'object-listener') as $text)
 		{
 			$parameters = [];
 			ParameterMapSerializer::unserializeParameters($parameters,
@@ -493,7 +504,7 @@ class ReflectionDriver implements MappingDriver
 			$listenerClassName = Container::keyValue($parameters,
 				'class');
 			if (!$listenerClassName)
-				throw MappingException::entityListenerClassNotFound(
+				throw MappingException::objectListenerClassNotFound(
 					null, null);
 
 			$listenerClassName = $this->resolveClassname(
@@ -512,7 +523,7 @@ class ReflectionDriver implements MappingDriver
 			}
 
 			if (!\class_exists($listenerClassName))
-				throw MappingException::entityListenerClassNotFound(
+				throw MappingException::objectListenerClassNotFound(
 					$listenerClassName, $listenerClassName);
 
 			foreach ($this->getEventParameters() as $parameter => $event)
@@ -521,23 +532,23 @@ class ReflectionDriver implements MappingDriver
 				if (!$method)
 					continue;
 
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"addEntityListener", $event, $listenerClassName,
 					$method);
 			}
-		} // entity-listener
+		} // object-listener
 
 		// Doctrine ORM compatibility
 		{
 			$primaryTable = [];
 			$tableName = $this->getTableNameFromClassName($className);
-			$primaryTable['name'] = Container::keyValue($entityOptions,
+			$primaryTable['name'] = Container::keyValue($objectOptions,
 				'table', $tableName);
-			if (($schema = Container::keyValue($entityOptions, 'schema')))
+			if (($schema = Container::keyValue($objectOptions, 'schema')))
 				$primaryTable['schema'] = $schema;
 
-			self::invokeClassMetadataMethod($metadata, "setPrimaryTable",
-				$primaryTable);
+			ClassMetadataAdapter::assignMetadataElement($metadata,
+				"setPrimaryTable", $primaryTable);
 		}
 
 		$visited = [];
@@ -550,6 +561,43 @@ class ReflectionDriver implements MappingDriver
 			while (($reflectionClass = $reflectionClass->getParentClass()))
 				$this->processProperties($visited, $metadata, $file,
 					$reflectionClass, $defaultInstance);
+		}
+
+		// Doctrine ORM compatibility
+		{
+			$primaryTable = [];
+			$tableName = $this->getTableNameFromClassName($className);
+			$tableName = Container::keyValue($objectOptions, 'table',
+				$tableName);
+
+			$primaryTable['name'] = $tableName;
+			if (($schema = Container::keyValue($objectOptions, 'schema')))
+				$primaryTable['schema'] = $schema;
+
+			$fields = $this->metadataMappingCache[$className][self::MAPPING_FIELDS];
+			$indexes = [];
+			foreach ($fields as $fieldName => $mapping)
+			{
+				$indexed = Container::keyValue($mapping, 'indexed');
+				$name = Container::keyValue($mapping, 'indexName');
+				if (!$indexed && empty($name))
+					continue;
+				if (empty($name))
+					$name = $tableName . '_' .
+						Text::toSnakeCase($fieldName) . '_idx';
+				$index = [
+					'fields' => [
+						$fieldName
+					]
+				];
+				$indexes[$name] = $index;
+			}
+
+			if (\count($indexes))
+				$primaryTable['indexes'] = $indexes;
+
+			ClassMetadataAdapter::assignMetadataElement($metadata,
+				"setPrimaryTable", $primaryTable);
 		}
 	}
 
@@ -616,24 +664,24 @@ class ReflectionDriver implements MappingDriver
 				unset($mapping['generator']);
 				$type = self::setSpecialGenerator($type, $metadata,
 					$mapping);
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"setIdGeneratorType", $type);
 			}
 			if (isset($mapping['version']))
 			{
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"setVersionMapping", $mapping);
 				unset($mapping['version']);
 			}
 
 			if (isset($mapping['version']))
 			{
-				self::invokeClassMetadataMethod($metadata,
+				ClassMetadataAdapter::assignMetadataElement($metadata,
 					"setVersionMapping", $mapping);
 				unset($mapping['version']);
 			}
-			self::invokeClassMetadataMethod($metadata, $mapFunction,
-				$mapping);
+			ClassMetadataAdapter::assignMetadataElement($metadata,
+				$mapFunction, $mapping);
 		}
 	}
 
@@ -645,8 +693,8 @@ class ReflectionDriver implements MappingDriver
 
 			$mapFunction = $data['mapFunction'];
 			$mapping = $data['mapping'];
-			self::invokeClassMetadataMethod($metadata, $mapFunction,
-				$mapping);
+			ClassMetadataAdapter::assignMetadataElement($metadata,
+				$mapFunction, $mapping);
 		}
 	}
 
@@ -716,10 +764,10 @@ class ReflectionDriver implements MappingDriver
 			];
 			$mapFunction = null;
 
-			if ($this->hasTag($block, self::TAG_FIELD))
+			if ($this->hasTag($block, self::TAG_PROPERTY))
 			{
 				$mapFunction = 'mapField';
-				if (($field = $this->getTag($block, self::TAG_FIELD)) !==
+				if (($field = $this->getTag($block, self::TAG_PROPERTY)) !==
 					null)
 					$this->parseParameters($mapping, $field, $metadata,
 						\array_merge($propertyTagParameters,
@@ -857,13 +905,6 @@ class ReflectionDriver implements MappingDriver
 	 *        	Method arguments
 	 * @return void|mixed
 	 */
-	public static function invokeClassMetadataMethod($metadata, $method,
-		...$arguments)
-	{
-		ClassMetadataAdapter::assignMetadataElement($metadata, $method,
-			...$arguments);
-	}
-
 	protected function parseParameters(&$output, $text,
 		ClassMetadata $metadata, $parametersProperties)
 	{
@@ -981,7 +1022,7 @@ class ReflectionDriver implements MappingDriver
 	{
 		if (\strcasecmp($type, 'custom') == 0)
 		{
-			self::invokeClassMetadataMethod($metadata,
+			ClassMetadataAdapter::assignMetadataElement($metadata,
 				"setCustomGeneratorDefinition",
 				[
 					'class' => $mapping['customIdGeneratorClass']
@@ -990,7 +1031,7 @@ class ReflectionDriver implements MappingDriver
 		}
 		elseif (\strcasecmp($type, 'sequence') == 0)
 		{
-			self::invokeClassMetadataMethod($metadata,
+			ClassMetadataAdapter::assignMetadataElement($metadata,
 				"setSequenceGeneratorDefinition", $mapping);
 		}
 
@@ -1240,11 +1281,11 @@ class ReflectionDriver implements MappingDriver
 		return $this->lifeCycleEventParameters;
 	}
 
-	public static function getEntityTagParametersDescriptor()
+	public static function getObjectTagParametersDescriptor()
 	{
-		if (!isset(self::$entityTagParametersDescriptor))
+		if (!isset(self::$objectTagParametersDescriptor))
 		{
-			self::$entityTagParametersDescriptor = [
+			self::$objectTagParametersDescriptor = [
 				'table',
 				'schema',
 				'read-only' => [
@@ -1253,7 +1294,7 @@ class ReflectionDriver implements MappingDriver
 				'repository-class'
 			];
 		}
-		return self::$entityTagParametersDescriptor;
+		return self::$objectTagParametersDescriptor;
 	}
 
 	public static function getPropertyTagParametersDescriptor()
@@ -1329,6 +1370,14 @@ class ReflectionDriver implements MappingDriver
 					],
 					'type' => 'boolean'
 				],
+				'indexed' => [
+					'pre-set' => [
+						self::class,
+						'stringToBoolean'
+					],
+					'type' => 'boolean'
+				],
+				'index-name',
 				'generated' => [
 					'pre-set' => [
 						self::class,
@@ -1490,11 +1539,11 @@ class ReflectionDriver implements MappingDriver
 	const MAPPING_ASSOCIATIONS = 'associations';
 
 	/**
-	 * Parameters descritpr for the entity tag.
+	 * Parameters descritpr for the object tag.
 	 *
 	 * @var array
 	 */
-	private static $entityTagParametersDescriptor;
+	private static $objectTagParametersDescriptor;
 
 	/**
 	 * Common parameters for all kind of properties (field, id, association)

@@ -9,5 +9,9 @@
 
 		<one-to-many target-entity="Bug" field="reportedBugs" mapped-by="reporter" />
 		<one-to-many target-entity="Bug" field="assignedBugs" mapped-by="engineer" />
+		
+		<indexes>
+			<index name="User_name_idx" fields="name" />
+		</indexes>
 	</entity>
 </doctrine-mapping>

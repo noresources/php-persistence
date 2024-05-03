@@ -5,7 +5,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 
 /**
  *
- * @persistent-entity table=users
+ * @persistent-object table=users
  */
 class User
 {
@@ -20,7 +20,7 @@ class User
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-field indexed=true
 	 * @var string
 	 */
 	protected $name;

@@ -12,7 +12,7 @@ use NoreSources\Persistence\TestData\Abstracts\ParentEntity;
 
 /**
  *
- * @persistent-entity
+ * @persistent-object
  *
  */
 class ChildEntity extends ParentEntity

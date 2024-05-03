@@ -7,7 +7,7 @@ use DateTime;
 
 /**
  *
- * @persistent-entity table=bugs
+ * @persistent-object table=bugs
  */
 class Bug
 {
