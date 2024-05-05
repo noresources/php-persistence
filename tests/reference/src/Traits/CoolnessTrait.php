@@ -14,7 +14,7 @@ trait CoolnessTrait
 	/**
 	 * Coolness
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 *
 	 * @var string
 	 */

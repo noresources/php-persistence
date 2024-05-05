@@ -32,7 +32,7 @@ class ChildEntity extends ParentEntity
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var string
 	 */
 	private $kind;

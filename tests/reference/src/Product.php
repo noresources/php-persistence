@@ -17,7 +17,7 @@ class Product
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 */
 	protected $name;
 

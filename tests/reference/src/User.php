@@ -20,7 +20,7 @@ class User
 
 	/**
 	 *
-	 * @persistent-field indexed=true
+	 * @persistent-property index-name=User_name_idx
 	 * @var string
 	 */
 	protected $name;

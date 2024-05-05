@@ -62,10 +62,10 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			], $flags);
 
 		$ormMeta = new ClassMetadata($className);
-		$basicMeta = new GenericClassMetadata($className);
+		$genericMeta = new GenericClassMetadata($className);
 		$ormMeta->wakeupReflection($reflectionService);
 
-		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$reflectionDriver->loadMetadataForClass($className, $genericMeta);
 		$reflectionDriver->loadMetadataForClass($className, $ormMeta);
 
 		$localName = TypeDescription::getLocalName($className, true);
@@ -75,7 +75,7 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 
 		$this->assertTrue(
 			ClassMetadataAdapter::retrieveMetadataProperty(
-				$isMappedSuperclass, $basicMeta, 'isMappedSuperclass'),
+				$isMappedSuperclass, $genericMeta, 'isMappedSuperclass'),
 			'Generic class metadata has $isMappedSuperclass');
 		$this->assertTrue($isMappedSuperclass,
 			$localName . ' isMappedSuperclass (Generic class metadata)');
@@ -92,8 +92,8 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			], $flags);
 
 		$ormMeta = new ClassMetadata($className);
-		$basicMeta = new GenericClassMetadata($className);
-		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$genericMeta = new GenericClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $genericMeta);
 		$ormMeta->wakeupReflection($reflectionService);
 
 		$xmlDriver = new XmlDriver(
@@ -112,17 +112,17 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				'getTypeOfField' => [
 					'id'
 				]
-			], $ormMeta, $basicMeta, $className);
+			], $ormMeta, $genericMeta, $className);
 
-		$directAccessIdGenerator = $basicMeta->idGenerator;
+		$directAccessIdGenerator = $genericMeta->idGenerator;
 		$this->assertNotNull($directAccessIdGenerator,
 			'ID generator (direct access)');
 		$adapterIdGenerator = ClassMetadataAdapter::getIdGenerator(
-			$basicMeta);
+			$genericMeta);
 		$this->assertNotNull($adapterIdGenerator,
 			'ID generator from adapter method');
 
-		$mapping = $basicMeta->getFieldMapping('name');
+		$mapping = $genericMeta->getFieldMapping('name');
 		$this->assertIsArray($mapping, 'Field mapping');
 		$this->assertArrayHasKey('extra', $mapping, 'Mapping extra');
 		$extra = $mapping['extra'];
@@ -200,8 +200,8 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 		$className = User::class;
 
 		$ormMeta = new ClassMetadata($className);
-		$basicMeta = new GenericClassMetadata($className);
-		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$genericMeta = new GenericClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $genericMeta);
 		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 		$ormMeta->wakeupReflection($reflectionService);
 
@@ -222,14 +222,24 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				'isAssociationInverseSide' => [
 					'assignedBugs'
 				]
-			], $ormMeta, $basicMeta, 'User metadata');
+			], $ormMeta, $genericMeta, 'User metadata');
+
+		$expected = $ormMeta->table;
+		\ksort($expected);
+		$actual = $genericMeta->table;
+		\ksort($actual);
+
+		$expected = \json_encode($expected, JSON_PRETTY_PRINT);
+		$actual = \json_encode($actual, JSON_PRETTY_PRINT);
+
+		$this->assertEquals($expected, $actual, 'Primary table');
 
 		/////////////////////////////////////////////////////
 		$className = Bug::class;
 
 		$ormMeta = new ClassMetadata($className);
-		$basicMeta = new GenericClassMetadata($className);
-		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$genericMeta = new GenericClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $genericMeta);
 		$xmlDriver->loadMetadataForClass($className, $ormMeta);
 		$ormMeta->wakeupReflection($reflectionService);
 
@@ -284,14 +294,15 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				'isSingleValuedAssociation' => [
 					'engineer'
 				]
-			], $ormMeta, $basicMeta, $className);
+			], $ormMeta, $genericMeta, $className);
 
-		$targetClass = $basicMeta->getAssociationTargetClass('engineer');
+		$targetClass = $genericMeta->getAssociationTargetClass(
+			'engineer');
 		$this->assertEquals('User', $targetClass,
 			'Association target class name is local');
 		$this->assertEquals(User::class,
 			ClassMetadataAdapter::getFullyQualifiedClassName(
-				$targetClass, $basicMeta),
+				$targetClass, $genericMeta),
 			ClassMetadataAdapter::class .
 			'::getFullyQualifiedClassName()');
 		;
@@ -307,11 +318,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				$this->getReferenceFileDirectory() . '/src'
 			], $flags);
 
-		$basicMeta = new GenericClassMetadata($className);
-		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$genericMeta = new GenericClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $genericMeta);
 
-		$this->assertNotNull($basicMeta->customGeneratorDefinition,
-			TypeDescription::getLocalName($basicMeta) . ' using ' .
+		$this->assertNotNull($genericMeta->customGeneratorDefinition,
+			TypeDescription::getLocalName($genericMeta) . ' using ' .
 			TypeDescription::getLocalName($reflectionDriver) . ' ' .
 			' Custom generator ');
 
@@ -339,8 +350,8 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 				$this->getReferenceFileDirectory() . '/src'
 			], $flags);
 
-		$basicMeta = new GenericClassMetadata($className);
-		$reflectionDriver->loadMetadataForClass($className, $basicMeta);
+		$genericMeta = new GenericClassMetadata($className);
+		$reflectionDriver->loadMetadataForClass($className, $genericMeta);
 
 		$xmlDriver = new XmlDriver(
 			[
@@ -355,12 +366,12 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			'created',
 			'embeddedUser'
 		];
-		$actual = $basicMeta->getFieldNames();
+		$actual = $genericMeta->getFieldNames();
 		$this->assertEquals($expected, $actual,
 			'ReflectionDriver field names');
 
 		$expected = User::class;
-		$actual = $basicMeta->getTypeOfField('embeddedUser');
+		$actual = $genericMeta->getTypeOfField('embeddedUser');
 		$this->assertEquals($expected, $actual,
 			'ReflectionDriver type of embedded user');
 
@@ -368,10 +379,11 @@ class ReflectionDriverTest extends \PHPUnit\Framework\TestCase
 			'getFieldNames'
 		];
 
-		$this->compareImplementation($tests, $ormMeta, $basicMeta,
+		$this->compareImplementation($tests, $ormMeta, $genericMeta,
 			$className);
 
-		$mapper = new ClassMetadataReflectionPropertyMapper($basicMeta);
+		$mapper = new ClassMetadataReflectionPropertyMapper(
+			$genericMeta);
 		$now = new \DateTime('now');
 		$nowString = $now->format(\DateTime::ISO8601);
 		$user = new User(777, 'Lucky Luke');

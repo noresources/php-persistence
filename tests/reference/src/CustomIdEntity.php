@@ -30,14 +30,14 @@ class CustomIdEntity
 	/**
 	 * The entity name
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var string
 	 */
 	public $name;
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var string|NULL
 	 */
 	public $nickname;
@@ -57,7 +57,7 @@ class CustomIdEntity
 	/**
 	 * The date of the beginning of the master plan to rule the world.
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var \DateTimeInterface
 	 */
 	private $secret;

@@ -26,7 +26,7 @@ abstract class ParentEntity
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var string
 	 */
 	public $firstName = 'Juste';
@@ -52,7 +52,7 @@ abstract class ParentEntity
 	 *
 	 * This field will not be visible by child class ReflectionClass
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var string
 	 */
 	private $lastName = 'Leblanc';

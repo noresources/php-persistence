@@ -25,14 +25,14 @@ class EmbeddedObjectProperty
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var \DateTimeInterface
 	 */
 	public $created;
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var User
 	 */
 	public $embeddedUser;

@@ -30,7 +30,7 @@ class BasicEntity
 	/**
 	 * The entity name
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @persistent-extra user-defined=option; parameterCase="Camel case"
 	 * @var string
 	 */
@@ -38,7 +38,7 @@ class BasicEntity
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var string|NULL
 	 */
 	public $nickname;
@@ -66,7 +66,7 @@ class BasicEntity
 	/**
 	 * The date of the beginning of the master plan to rule the world.
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var \DateTimeInterface
 	 */
 	private $secret;

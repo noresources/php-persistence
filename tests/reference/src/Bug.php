@@ -22,20 +22,20 @@ class Bug
 
 	/**
 	 *
-	 * @persistent-field type=text
+	 * @persistent-property type=text
 	 */
 	protected $description;
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 * @var \DateTimeInterface
 	 */
 	protected $created;
 
 	/**
 	 *
-	 * @persistent-field
+	 * @persistent-property
 	 */
 	protected $status;
 
