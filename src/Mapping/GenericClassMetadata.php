@@ -11,6 +11,7 @@ namespace NoreSources\Persistence\Mapping;
 use Doctrine\Persistence\Mapping\ClassMetadata;
 use NoreSources\Container\Container;
 use NoreSources\Persistence\Mapping\Traits\AssociationMappingClassMetadataTrait;
+use NoreSources\Persistence\Mapping\Traits\DBALClassMetadataTrait;
 use NoreSources\Persistence\Mapping\Traits\FieldMappingClassMetadataTrait;
 use NoreSources\Persistence\Mapping\Traits\IdGeneratorTypeClassnameTrait;
 use NoreSources\Persistence\Mapping\Traits\LifecycleCallbackClassMetadataTrait;
@@ -28,6 +29,7 @@ class GenericClassMetadata extends \ArrayObject implements
 	use FieldMappingClassMetadataTrait;
 	use AssociationMappingClassMetadataTrait;
 	use LifecycleCallbackClassMetadataTrait;
+	use DBALClassMetadataTrait;
 
 	/**
 	 *
