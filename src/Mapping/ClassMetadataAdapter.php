@@ -122,8 +122,9 @@ class ClassMetadataAdapter
 		$name, $dflt = null)
 	{
 		$value = $dflt;
+		$arguments = [];
 		if (self::retrieveMetadataElement($value, $metadata, $name,
-			$arguments))
+			...$arguments))
 			return $value;
 		return $dflt;
 	}
