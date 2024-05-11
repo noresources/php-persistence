@@ -120,6 +120,7 @@ class Index implements ContainerInterface, ArrayRepresentation,
 		return $this->data;
 	}
 
+	#[\ReturnTypeWillChange]
 	public function getIterator()
 	{
 		return new \ArrayIterator($this->data);
