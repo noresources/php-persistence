@@ -13,7 +13,8 @@ use Doctrine\Persistence\Mapping\ClassMetadataFactory;
 use NoreSources\Container\Container;
 use NoreSources\Persistence\Mapping\ObjectManagerRegistryClassMetadataFactory;
 
-class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
+class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate,
+	\Countable
 {
 
 	public function __construct()
@@ -182,9 +183,16 @@ class ObjectManagerRegistry implements ObjectManager, \IteratorAggregate
 	 *
 	 * @return \Iterator
 	 */
+	#[\ReturnTypeWillChange]
 	public function getIterator(): \Iterator
 	{
 		return new \ArrayIterator($this->objectManagers);
+	}
+
+	#[\ReturnTypeWillChange]
+	public function count()
+	{
+		return \count($this->objectManagers);
 	}
 
 	/**
