@@ -18,6 +18,7 @@ use NoreSources\Persistence\ObjectManagerAwareInterface;
 use NoreSources\Persistence\ObjectManagerProviderInterface;
 use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Persistence\Traits\ObjectManagerReferenceTrait;
+use NoreSources\Type\TypeConversion;
 
 /**
  * Implements PropertyMappingInterface using Reflection
@@ -169,16 +170,18 @@ class ClassMetadataReflectionPropertyMapper implements
 
 		try
 		{
-			$u = \unserialize($value);
+			$u = @\unserialize($value);
 			if (\is_a($u, $expectedClassName))
 				return $u;
 		}
 		catch (\Exception $e)
 		{}
 
-		$cls = $this->getReflectionService()->getReflectionClass(
-			$expectedClassName);
-		return $cls->newInstance($value);
+		return TypeConversion::to($expectedClassName, $value,
+			[
+				TypeConversion::OPTION_FLAGS => (TypeConversion::OPTION_FLAG_OBJECT_CONSTRUCTOR |
+				TypeConversion::OPTION_FLAG_OBJECT_FACTORY)
+			]);
 	}
 
 	protected function assignObjectAssociationPropertyAsIs($object,
