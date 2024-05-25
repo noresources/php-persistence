@@ -61,7 +61,7 @@ class ObjectManagerRegistryClassMetadataFactory implements
 			/**
 			 *
 			 * @var ObjectManager $manager
-			 * @var \Doctrine\ORM\Mapping\ClassMetadataFactory $factory
+			 * @var ClassMetadataFactory $factory
 			 */
 			$factory = $manager->getMetadataFactory();
 			if (!$factory->isTransient($className))
