@@ -63,37 +63,56 @@ trait ObjectManagerTrait
 			$this->unitOfWork = $this->createUnitOfWork();
 
 		$insert = $requireIdGeneration = false;
-		$metadata = null;
-		$className = null;
 
 		$insert = !$this->contains($object);
+		$className = \get_class($object);
+		$metadata = $this->getClassMetadata($className);
 		$idGenerator = null;
-
-		if ($insert)
-		{
-			$className = \get_class($object);
-			$metadata = $this->getClassMetadata($className);
-
-			$idGenerator = ClassMetadataAdapter::getIdGenerator(
-				$metadata);
-			$requireIdGeneration = ($idGenerator !== null);
-		}
-
-		if (!$insert)
-		{
-			$this->unitOfWork->update($object);
-			return;
-		}
 
 		$listenerInvoker = null;
 		if ($this instanceof ListenerInvokerProviderInterface)
 			$listenerInvoker = $this->getListenerInvoker();
 
-		if ($listenerInvoker)
+		if ($insert)
 		{
-			$event = new LifecycleEventArgs($object, $this);
-			$listenerInvoker->invoke($metadata, Event::prePersist,
-				$object, $event);
+			if ($listenerInvoker)
+			{
+				$event = new LifecycleEventArgs($object, $this);
+				$listenerInvoker->invoke($metadata, Event::prePersist,
+					$object, $event);
+			}
+			$idGenerator = ClassMetadataAdapter::getIdGenerator(
+				$metadata);
+			$requireIdGeneration = ($idGenerator !== null);
+		}
+		else
+		{
+			$eventName = Event::preUpdate;
+			if ($listenerInvoker &&
+				$listenerInvoker->hasListenerFor($metadata, $eventName))
+			{
+				$original = null;
+				$changeSet = [];
+				if ($this->hasRepository($className))
+				{
+					$repository = $this->defaultGetRepository(
+						$className);
+					if ($repository instanceof ObjectContainerInterface)
+						$original = $repository->getObjectOriginalCopy(
+							$object);
+					$reflectionService = ReflectionService::getInstance();
+					$changeSet = ObjectComparer::computeChangeSet(
+						$metadata, $reflectionService, $original,
+						$object);
+				}
+
+				$e = new \Doctrine\Persistence\Event\PreUpdateEventArgs(
+					$object, $this, $changeSet);
+				$listenerInvoker->invoke($metadata, $eventName, $object,
+					$e);
+			}
+			$this->unitOfWork->update($object);
+			return;
 		}
 
 		if ($requireIdGeneration)
@@ -126,6 +145,15 @@ trait ObjectManagerTrait
 			$repository = $this->getRepository($className);
 			if ($repository instanceof ObjectContainerInterface)
 				$repository->detach($object);
+		}
+
+		if ($this instanceof ListenerInvokerProviderInterface &&
+			($listenerInvoker = $this->getListenerInvoker()))
+		{
+			$metadata = $this->getClassMetadata($className);
+			$event = new LifecycleEventArgs($object, $this);
+			$listenerInvoker->invoke($metadata, Event::preRemove,
+				$object, $event);
 		}
 	}
 
@@ -310,25 +338,6 @@ trait ObjectManagerTrait
 						$original = $this->unitOfWork->getObjectOriginalCopy(
 							$object);
 
-					$eventName = Event::preUpdate;
-
-					if ($listenerInvoker &&
-						$listenerInvoker->hasListenerFor($metadata,
-							$eventName))
-					{
-						$reflectionService = ReflectionService::getInstance();
-
-						$changeSet = ObjectComparer::computeChangeSet(
-							$metadata, $reflectionService, $original,
-							$object);
-
-						$e = new \Doctrine\Persistence\Event\PreUpdateEventArgs(
-							$object, $this, $changeSet);
-
-						$listenerInvoker->invoke($metadata, $eventName,
-							$object, $e);
-					}
-
 					$persister->persist($object);
 					if ($initialId === NULL)
 					{
@@ -351,12 +360,7 @@ trait ObjectManagerTrait
 
 				break;
 				case UnitOfWork::OPERATION_REMOVE:
-					if ($listenerInvoker)
-						$listenerInvoker->invoke($metadata,
-							Event::preRemove, $object, $event);
-
 					$persister->remove($object);
-
 					$this->unitOfWork->setObjectOriginalCopy($object,
 						clone $object);
 
