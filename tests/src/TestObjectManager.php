@@ -8,10 +8,9 @@
  */
 namespace NoreSources\Persistence\TestUtility;
 
-use Doctrine\Persistence\ObjectManager;
-use NoreSources\Persistence\Traits\ObjectManagerTrait;
+use NoreSources\Persistence\AbstractObjectManager;
 
-class TestObjectManager implements ObjectManager
+class TestObjectManager extends AbstractObjectManager
+
 {
-	use ObjectManagerTrait;
 }
