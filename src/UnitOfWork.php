@@ -93,6 +93,37 @@ class UnitOfWork implements ObjectContainerInterface
 		];
 	}
 
+	/**
+	 *
+	 * @param string|NULL $className
+	 *        	Class name
+	 * @param integer[]|NULL $operations
+	 *        	Operation type filter
+	 * @return object[]
+	 */
+	public function getObjectsBy($className = null, $operations = null)
+	{
+		$list = [];
+		foreach ($this->managedObjects as $oid => $data)
+		{
+			if ($operations && isset($data[self::KEY_OPERATION]))
+			{
+				if (!\in_array($data[self::KEY_OPERATION], $operations))
+					continue;
+			}
+
+			$object = $data[self::KEY_OBJECT];
+			if ($className)
+			{
+				$objectClassName = \get_class($object);
+				if ($className != $objectClassName)
+					continue;
+			}
+			$list[] = $object;
+		}
+		return $list;
+	}
+
 	public function getObjectOriginalCopy(object $object)
 	{
 		$oid = $this->getObjectOID($object);
