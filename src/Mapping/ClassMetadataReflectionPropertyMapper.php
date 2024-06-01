@@ -19,6 +19,7 @@ use NoreSources\Persistence\ObjectManagerProviderInterface;
 use NoreSources\Persistence\Mapping\Traits\ReflectionServiceReferenceTrait;
 use NoreSources\Persistence\Traits\ObjectManagerReferenceTrait;
 use NoreSources\Type\TypeConversion;
+use NoreSources\Type\TypeDescription;
 
 /**
  * Implements PropertyMappingInterface using Reflection
@@ -85,6 +86,10 @@ class ClassMetadataReflectionPropertyMapper implements
 			$data = $validData;
 		}
 
+		if (!Container::isTraversable($data))
+			throw new \InvalidArgumentException(
+				TypeDescription::getName($data) .
+				' $data is not traversable');
 		foreach ($data as $name => $value)
 		{
 			if (\in_array($name, $fieldNames))
@@ -217,7 +222,8 @@ class ClassMetadataReflectionPropertyMapper implements
 
 		if ($this->metadata->isSingleValuedAssociation($name))
 		{
-			if (!(\is_object($value) && \is_a($value, $associationCl)))
+			if (!(\is_object($value) &&
+				\is_a($value, $associationClassName)))
 			{
 				$value = $this->findObject($manager,
 					$manager->getClassMetadata($associationClassName),
