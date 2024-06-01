@@ -41,6 +41,14 @@ interface ObjectContainerInterface
 	function detach(object $object);
 
 	/**
+	 *
+	 * @param object $object
+	 *        	Object to get ID
+	 * @return mixed|NULL Object identity
+	 */
+	function getObjectIdentity(object $object);
+
+	/**
 	 * Get the original copy of the given object
 	 * as it when it was attached
 	 *

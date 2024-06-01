@@ -8,6 +8,8 @@
  */
 namespace NoreSources\Persistence;
 
+use NoreSources\Container\Container;
+
 /**
  * ID generator using PHP uniqid function
  */
@@ -193,6 +195,21 @@ class UnitOfWork implements ObjectContainerInterface
 		foreach ($this->operationOrder as $oid)
 			$tasks[] = $this->managedObjects[$oid];
 		return $tasks;
+	}
+
+	/**
+	 *
+	 * @param object $object
+	 *        	Managed object
+	 * @return mixed|NULL Object ID if any
+	 */
+	public function getObjectIdentity(object $object)
+	{
+		$oid = $this->getObjectOID($object);
+		if (!isset($this->managedObjects[$oid]))
+			$this->notManagedException($object);
+		return Container::keyValue(
+			$this->managedObjects[$oid][self::KEY_IDENTITY], NULL);
 	}
 
 	public function setObjectIdentity($object, $id)
