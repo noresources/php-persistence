@@ -184,7 +184,7 @@ trait ObjectManagerTrait
 			$this->foreachRepository(
 				function ($repository) {
 					if ($repository instanceof ObjectContainerInterface)
-						$repository->detachAll();
+						$repository->clear();
 				});
 	}
 

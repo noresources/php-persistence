@@ -156,21 +156,16 @@ class UnitOfWork implements ObjectContainerInterface
 		\array_splice($this->operationOrder, $index, 1);
 	}
 
-	public function detachAll()
+	public function clear()
 	{
-		$this->clear(true);
+		$this->managedObjects = [];
+		$this->operationOrder = [];
 	}
 
-	public function clear($full)
+	public function clearOperations()
 	{
-		if ($full)
-			$this->managedObjects = [];
-		else
-		{
-			foreach ($this->managedObjects as $oid => $infos)
-				unset($this->managedObjects[$oid][self::KEY_OPERATION]);
-		}
-
+		foreach ($this->managedObjects as $oid => $infos)
+			unset($this->managedObjects[$oid][self::KEY_OPERATION]);
 		$this->operationOrder = [];
 	}
 
