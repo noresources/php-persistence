@@ -22,7 +22,7 @@ interface ObjectContainerInterface
 	/**
 	 * Detach all objects
 	 */
-	function detachAll();
+	function clear();
 
 	/**
 	 * Make the given object contained in the interface implementation instance.

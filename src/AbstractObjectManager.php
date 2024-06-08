@@ -175,14 +175,14 @@ abstract class AbstractObjectManager implements ObjectManager
 	public function clear($objectName = null)
 	{
 		if (isset($this->unitOfWork))
-			$this->unitOfWork->clear(true);
+			$this->unitOfWork->clear();
 		if ($objectName)
 		{}
 		else
 			$this->foreachRepository(
 				function ($repository) {
 					if ($repository instanceof ObjectContainerInterface)
-						$repository->detachAll();
+						$repository->clear();
 				});
 	}
 
@@ -397,7 +397,7 @@ abstract class AbstractObjectManager implements ObjectManager
 			if ($restorId)
 				$this->setObjectIdentifierValues($object, $currentId);
 		}
-		$this->unitOfWork->clear(false);
+		$this->unitOfWork->clearOperations();
 	}
 
 	/**
