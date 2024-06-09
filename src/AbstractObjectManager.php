@@ -134,14 +134,8 @@ abstract class AbstractObjectManager implements ObjectManager
 			$this->notManagedException($object);
 		if (!$this->unitOfWork)
 			$this->unitOfWork = $this->createUnitOfWork();
-		$this->unitOfWork->remove($object);
+
 		$className = \get_class($object);
-		if ($this->hasRepository($className))
-		{
-			$repository = $this->getRepository($className);
-			if ($repository instanceof ObjectContainerInterface)
-				$repository->detach($object);
-		}
 
 		if ($this instanceof ListenerInvokerProviderInterface &&
 			($listenerInvoker = $this->getListenerInvoker()))
@@ -152,7 +146,16 @@ abstract class AbstractObjectManager implements ObjectManager
 				$object, $event);
 		}
 
-		$this->finalizePreRemove($object, $metadata);
+		$this->preRemoveTask($object, $metadata);
+
+		if ($this->hasRepository($className))
+		{
+			$repository = $this->getRepository($className);
+			if ($repository instanceof ObjectContainerInterface)
+				$repository->detach($object);
+		}
+
+		$this->unitOfWork->remove($object);
 	}
 
 	/**
@@ -745,13 +748,17 @@ abstract class AbstractObjectManager implements ObjectManager
 	}
 
 	/**
+	 * Additional task to do when an object is scheduled for removal.
+	 *
+	 * This method is invoked after preRemove event and before detaching object from unit of work
+	 * and repository
 	 *
 	 * @param object $object
 	 *        	Object that will be removed
 	 * @param ClassMetadata $metadata
 	 *        	Object lcass metadata
 	 */
-	protected function finalizePreRemove($object, $metadata)
+	protected function preRemoveTask($object, $metadata)
 	{}
 
 	/**
