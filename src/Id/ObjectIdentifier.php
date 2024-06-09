@@ -33,16 +33,7 @@ class ObjectIdentifier
 		$cb = \count($b);
 		if ($ca != $cb)
 			return false;
-		foreach ($a as $k => $va)
-		{
-			if (!\array_key_exists($k, $b))
-				return false;
-			$vb = $b[$k];
-			if ($va != $vb)
-				return false;
-		}
-
-		return true;
+		return \count(\array_diff($a, $b)) == 0;
 	}
 
 	/**
