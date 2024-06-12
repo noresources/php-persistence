@@ -25,11 +25,11 @@
 		}
 	}, 
 	"require": {
-		"noresources/ns-php-core": "^2.8", 
-		"noresources/ns-php-data": "^2.2", 
-		"doctrine/instantiator": "^1.5", 
-		"doctrine/persistence": "^3.2", 
-		"doctrine/inflector": "^1.4 || ^2.0"
+		"doctrine/inflector": "^1.4 || ^2.0",
+		"doctrine/instantiator": "^1.5",
+		"doctrine/persistence": "^3.2",
+		"noresources/ns-php-core": "^2.8",
+		"noresources/ns-php-http-core": "^1.2"
 	}, 
 	"require-dev": {
 		"phpunit/phpunit": ">=7.0", 
