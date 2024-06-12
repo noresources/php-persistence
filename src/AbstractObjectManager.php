@@ -264,7 +264,13 @@ abstract class AbstractObjectManager implements ObjectManager
 
 		$this->detach($object);
 
-		$existing = $this->find($className, $objectId);
+		$existing = null;
+		try
+		{
+			$existing = $this->find($className, $objectId);
+		}
+		catch (\Exception $e)
+		{}
 
 		$repository = $this->getRepository($className);
 		$populator = null;
@@ -277,7 +283,8 @@ abstract class AbstractObjectManager implements ObjectManager
 			throw new \RuntimeException(
 				'No PropertyMappingInterface found for ' . $className);
 
-		$populator->assignObjectProperties($object, $existing);
+		if ($existing)
+			$populator->assignObjectProperties($object, $existing);
 		if ($repository instanceof ObjectContainerInterface)
 			$repository->attach($object);
 	}

@@ -222,6 +222,12 @@ class ClassMetadataReflectionPropertyMapper implements
 
 		if ($this->metadata->isSingleValuedAssociation($name))
 		{
+			if (\is_null($value))
+			{
+				$field->setValue($object, $value);
+				return;
+			}
+
 			if (!(\is_object($value) &&
 				\is_a($value, $associationClassName)))
 			{
@@ -239,6 +245,8 @@ class ClassMetadataReflectionPropertyMapper implements
 			$associationClassName);
 		foreach ($value as $offset => $v)
 		{
+			if (\is_null($v))
+				continue;
 			if (!(\is_object($v) && \is_a($v, $associationClassName)))
 				$v = $this->findObject($manager, $associationMetadata,
 					$v);
