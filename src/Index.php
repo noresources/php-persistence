@@ -109,7 +109,7 @@ class Index implements ContainerInterface, ArrayRepresentation,
 		return $this->data[$indexValue];
 	}
 
-	public function has(string $indexValue)
+	public function has(string $indexValue): bool
 	{
 		$indexValue = $this->normalizeIndexValue($indexValue);
 		return isset($this->data[$indexValue]);

@@ -22,7 +22,7 @@ class ObjectManagerFactoryRegistry implements ContainerInterface
 	 * {@inheritdoc}
 	 * @see \Psr\Container\ContainerInterface::has()
 	 */
-	public function has($id)
+	public function has($id): bool
 	{
 		return isset($this->factories[$id]);
 	}
@@ -32,7 +32,7 @@ class ObjectManagerFactoryRegistry implements ContainerInterface
 	 * {@inheritdoc}
 	 * @see \Psr\Container\ContainerInterface::get()
 	 */
-	public function get($id)
+	public function get(string $id)
 	{
 		if (!isset($this->factories[$id]))
 			throw new KeyNotFoundException($id);
