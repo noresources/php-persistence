@@ -25,11 +25,11 @@
 		}
 	}, 
 	"require": {
-		"doctrine/inflector": "^1.4 || ^2.0",
+		"doctrine/inflector": "^1.4 || ^2.0", 
 		"doctrine/instantiator": "^1.5 || ^2.0", 
-		"doctrine/persistence": "^3.2",
-		"noresources/http-core": "^2.0",
-		"noresources/reflection": "^1.0",
+		"doctrine/persistence": "^3.2", 
+		"noresources/http-core": "^2.0", 
+		"noresources/reflection": "^1.0", 
 		"php": ">= 7.1"
 	}, 
 	"require-dev": {
@@ -45,7 +45,7 @@
 	}, 
 	"extra": {
 		"branch-alias": {
-			"dev-main": "0.16.x-dev"
+			"dev-main": "1.0.x-dev"
 		}
 	}, 
 	"suggest": {
