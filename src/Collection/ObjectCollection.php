@@ -299,7 +299,7 @@ class ObjectCollection implements Collection, ArrayRepresentation
 	 */
 	public function getHierarchyFromParentAssociation(
 		$parentAssociationName,
-		ReflectionService $reflectionService = null)
+		?ReflectionService $reflectionService = null)
 	{
 		if (!$this->metadata->isSingleValuedAssociation(
 			$parentAssociationName))

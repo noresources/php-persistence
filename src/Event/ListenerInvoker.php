@@ -40,7 +40,7 @@ class ListenerInvoker
 	 * @param ContainerInterface|ArrayAccess|array $listenerResolver
 	 *        	A listener resolver that provide a class instance from a class name.
 	 */
-	public function __construct(EventManager $evm = null,
+	public function __construct(?EventManager $evm = null,
 		$listenerResolver = null)
 
 	{

@@ -28,7 +28,7 @@ class GenericClassMetadataFactory extends AbstractClassMetadataFactory implement
 	 * @param MappingDriver $driver
 	 *        	Mapping driver to use
 	 */
-	public function __construct(MappingDriver $driver = null)
+	public function __construct(?MappingDriver $driver = null)
 	{
 		$this->setMetadataClass(GenericClassMetadata::class);
 		if ($driver)
@@ -179,7 +179,7 @@ class GenericClassMetadataFactory extends AbstractClassMetadataFactory implement
 	}
 
 	protected function validateRuntimeMetadata(Classmetadata $class,
-		ClassMetadata $parent = null)
+		?ClassMetadata $parent = null)
 	{
 		foreach ([
 			'validateIdentifier' => [],

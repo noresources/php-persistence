@@ -594,7 +594,7 @@ trait ObjectManagerTrait
 	 *        	Object to test
 	 * @return boolean FALSE if object identifier is missing or incomplete
 	 */
-	protected function isNewObject($object, ClassMetadata $class = null)
+	protected function isNewObject($object, ?ClassMetadata $class = null)
 	{
 		if (!$class)
 			$class = $this->getClassMetadata(\get_class($object));
@@ -650,7 +650,7 @@ trait ObjectManagerTrait
 	}
 
 	protected function setObjectIdentifierValues($object,
-		$generatedValues, ClassMetadata $metadata = null)
+		$generatedValues, ?ClassMetadata $metadata = null)
 	{
 		$metadata = $this->getClassMetadata(\get_class($object));
 		if (\method_exists($metadata, 'setIdentifierValues'))

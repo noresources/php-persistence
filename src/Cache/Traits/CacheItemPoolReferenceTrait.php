@@ -31,7 +31,7 @@ trait CacheItemPoolReferenceTrait
 	 *        	Cache implementation
 	 */
 	public function setCache(
-		CacheItemPoolInterface $cacheItemPool = null)
+		?CacheItemPoolInterface $cacheItemPool = null)
 	{
 		$this->cacheItemPool = $cacheItemPool;
 	}

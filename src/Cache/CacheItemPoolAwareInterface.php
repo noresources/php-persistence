@@ -22,5 +22,5 @@ interface CacheItemPoolAwareInterface
 	 * @param CacheItemPoolIter|NULL $cacheItemPool
 	 *        	Cache implementation
 	 */
-	function setCache(CacheItemPoolInterface $cacheItemPool = null);
+	function setCache(?CacheItemPoolInterface $cacheItemPool = null);
 }

@@ -53,7 +53,7 @@ class ClassMetadataAdapter
 	 * @return string Qualified object class name
 	 */
 	public static function getFullyQualifiedClassName($className,
-		ClassMetadata $fromMetadata = null)
+		?ClassMetadata $fromMetadata = null)
 	{
 		if (\strpos($className, '\\') !== false)
 			return $className;

@@ -29,7 +29,7 @@ class Hierarchy implements \JsonSerializable
 	 */
 	public $parent;
 
-	public function __construct($id, Hierarchy $parent = null)
+	public function __construct($id, ?Hierarchy $parent = null)
 	{
 		$this->id = $id;
 		$this->parent = $parent;
